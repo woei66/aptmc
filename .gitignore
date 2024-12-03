@@ -3,7 +3,6 @@
 .idea
 .fleet
 shell.nix
-lib/
 target/
 core/languages/
 vendor/
