@@ -23,8 +23,8 @@ final clientInfoUrl =
     'https://launchermeta.mojang.com/mc/game/version_manifest.json';
 // icon
 final iconUrl = 'https://launcher.mojang.com/download/minecraft-launcher.svg';
-// Minecraft client launcher file
-String? mcClientFile;
+// Minecraft launcher client jar file
+String? clientFile;
 // multiple instance name and directory. Ex: instances/1.20.1-pokemon-fabric/.minecraft/
 String? instanceName;
 String? appDataPath;

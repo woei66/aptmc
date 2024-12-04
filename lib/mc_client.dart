@@ -8,7 +8,7 @@ import 'download_file.dart';
 import 'myvars.dart';
 
 class MCClient {
-  static Future<void> setup(String? versionNum) async {
+  Future<void> setup(String? versionNum) async {
     try {
       getClientVersion(versionNum);
     } catch (e) {
@@ -17,9 +17,13 @@ class MCClient {
   }
 
   // get version information
-  static Future<void> getClientVersion(String? versionNum) async {
+  Future<void> getClientVersion(String? versionNum) async {
     final response = await http.get(Uri.parse(myvars.clientInfoUrl));
     if (response.statusCode == 200) {
+      // save version file to local disk
+      DownloadFile.download(
+          myvars.clientInfoUrl, '${appDataPath}/meta/version_manifest.json');
+      // decode response data
       final jsonData = jsonDecode(response.body);
       final release = jsonData['latest']['release'];
       final snapshot = jsonData['latest']['snapshot'];
@@ -48,11 +52,14 @@ class MCClient {
   }
 
   // parse version detail
-  static Future<void> parseVersion(String versionId, String url) async {
+  Future<void> parseVersion(String versionId, String url) async {
     try {
       final response = await http.get(Uri.parse(url));
       print('[debug] clientInfoUrl = ${url}');
       if (response.statusCode == 200) {
+        // save to local disk
+        DownloadFile.download(url, '${appDataPath}/meta/${versionId}.json');
+        // parse response
         final jsonData = jsonDecode(response.body);
 
         final downloads = jsonData['downloads'];
@@ -70,18 +77,34 @@ class MCClient {
         final minimumLauncherVersion = jsonData['minimumLauncherVersion'];
         final releaseTime = jsonData['releaseTime'];
 
-        final clientFile = '${appDataPath}/jar/${versionId}-client.jar';
-        createDirectoryIfNotExists(clientFile);
-
+        // get Minecraft client jar file
+        clientFile = '${appDataPath}/jar/${versionId}-client.jar';
+        await createDirectoryIfNotExists(clientFile!);
         print('[debug] client file= ${clientFile}');
-        await DownloadFile.download(clientUrl, clientFile);
-        await DownloadFile.checkFile(clientFile, clientSize, clientSha1);
-        mcClientFile = clientFile;
+        await DownloadFile.download(clientUrl, clientFile!);
+        await DownloadFile.checkFile(clientFile!, clientSize, clientSha1);
+        // get assets
+        final assetId = jsonData['assetIndex']['id'];
+        final assetUrl = jsonData['assetIndex']['url'];
+        final assetSize = jsonData['assetIndex']['size'];
+        final assetTotalSize = jsonData['assetIndex']['totalSize'];
+        final assetSha1 = jsonData['assetIndex']['sha1'];
+        DownloadFile.download(
+            url, '${appDataPath}/meta/asset-${versionId}-${assetId}.json');
       } else {
         print('Error: the response is failed.');
       }
     } catch (e) {
       print('[exception] catch ${e}');
+    }
+  }
+
+  Future<void> createDirectoryIfNotExists(String filePath) async {
+    final directory = Directory(filePath).parent;
+
+    if (!directory.existsSync()) {
+      print('Directory does not exist. Creating: ${directory.path}');
+      directory.createSync(recursive: true);
     }
   }
 }
@@ -111,3 +134,4 @@ servers.dat : list of servers and store added server information.
 servers.dat_old : backup file of servers.data
 usercache.json : players' UUID, name and used for multi-players.
 */
+

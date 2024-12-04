@@ -8,7 +8,7 @@ import 'utils.dart';
 import 'mc_client.dart';
 
 void main() async {
-  await setupAppDataPath(); // entry point
+  await setupAppDataPath(); // application data directory
   runApp(MinecraftLauncher());
 }
 
@@ -52,6 +52,12 @@ Future<void> setupAppDataPath() async {
       await subDir.create(recursive: true);
     }
   }
+}
+
+// the application data directory
+Future<String> getAppDataPath(String appName) async {
+  final directory = await getApplicationSupportDirectory();
+  return '${directory.path}/$appName';
 }
 
 class MinecraftLauncher extends StatelessWidget {

@@ -1,0 +1,16 @@
+name: CLA Check
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  check-cla:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CLA Signed
+        run: |
+          if ! grep -q "I agree to the CLA" <<< "$(gh pr view ${{ github.event.pull_request.number }} --json body --jq .body)"; then
+            echo "CLA not signed. Please add 'I agree to the CLA' in your Pull Request description.";
+            exit 1;
+          fi
