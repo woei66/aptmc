@@ -30,3 +30,8 @@ String? instanceName;
 String? appDataPath;
 // application name
 final appName = 'mmc9';
+// operating system
+String? osName;
+// JVM arguments
+String? jvmArgs;
+String? gameArgs;

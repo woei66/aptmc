@@ -8,29 +8,47 @@ import 'utils.dart';
 import 'mc_client.dart';
 
 void main() async {
+  await getOperatingSystem(); // get operating system name
   await setupAppDataPath(); // application data directory
   runApp(MinecraftLauncher());
 }
 
+Future<void> getOperatingSystem() async {
+  if (Platform.isWindows) {
+    osName = 'windows';
+  } else if (Platform.isLinux) {
+    osName = 'x86';
+  } else if (Platform.isMacOS) {
+    osName = 'osx';
+  } else if (Platform.isAndroid) {
+    osName = 'android';
+  } else if (Platform.isIOS) {
+    osName = 'ios';
+  }
+}
+
 /*
-assets/
-cache/
-icons/
-instances/
-libraries/
-meta/
-themes/
-translations/
-logs/
-config/
-jar/
-accounts.json
+assets/ : game assets including sound effect,voice,material,texture from Minecraft resorce server
+cache/ : temporary data of Minecraft server including updates,installation packages
+icons/ : icons of instances or versions and is used for launcher UI to help player to identify instance
+instances/ : to store Minecraft isolated instance,one instance for one isolated game environment(world,mods,configration)
+libraries/ : java libraries and related files for Minecraft which are provied by Mojang or 3rd
+meta/ : store configuration of launcher including version or index for management
+themes/ : customized theme of launcher
+translations/ : used by launcher for localization translation.
+logs/ : log files of game or launcher including errors,warning or debug information.
+config/ : file is ending with .cfg, .json or .xml are used for game or mods configuration.
+jar/ : specific Minecraft main .jar files. Ex: daemon
+accounts.json : store account information (Microsoft or Mojang) and is stored in encrypted for sing-in automatically.
 */
 Future<void> setupAppDataPath() async {
   // the application data directory
-  final appPath = await getAppDataPath(appName);
+  final directory = await getApplicationSupportDirectory();
+  final appPath = '${directory.path}/$appName';
   appDataPath = appPath.toString();
+
   print('Application data path: $appDataPath');
+
   List<String> subDirs = [
     'assets',
     'cache',
@@ -52,12 +70,6 @@ Future<void> setupAppDataPath() async {
       await subDir.create(recursive: true);
     }
   }
-}
-
-// the application data directory
-Future<String> getAppDataPath(String appName) async {
-  final directory = await getApplicationSupportDirectory();
-  return '${directory.path}/$appName';
 }
 
 class MinecraftLauncher extends StatelessWidget {
