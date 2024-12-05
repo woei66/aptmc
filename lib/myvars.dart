@@ -1,3 +1,5 @@
+import 'dart:io';
+
 String? launcherMSAClientID;
 String? curseforgeAPIKey;
 
@@ -29,9 +31,10 @@ String? clientFile;
 String? instanceName;
 String? appDataPath;
 // application name
-final appName = 'mmc9';
+final appName = 'MMC9Launcher';
 // operating system
 String? osName;
 // JVM arguments
 String? jvmArgs;
 String? gameArgs;
+String? javaPath;

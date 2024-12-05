@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:crypto/crypto.dart';
+import 'utils.dart';
+import 'myvars.dart';
 
 class DownloadFile {
   static Future<void> checkFile(
@@ -48,14 +50,16 @@ class DownloadFile {
 // expectedSize: the expected file size
 // expectedSha1: the expected sha1 of the
   static Future<Uint8List> download(String url, String filename) async {
-    File file = File(filename);
     final request = await HttpClient().getUrl(Uri.parse(url));
+    request.headers.add(HttpHeaders.userAgentHeader, "Dart/2.0");
     final response = await request.close();
 
     if (response.statusCode == 200) {
+      await ensureDirectoryExists(filename);
+      File file = File(filename);
       final bytes = await consolidateHttpClientResponseBytes(response);
       await file.writeAsBytes(bytes);
-      print("Download file is saved: ${filename}");
+      //print("Download file is saved: ${filename}");
       return bytes;
     } else {
       throw Exception("Downloaded failed, error = ${response.statusCode}");

@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:mmc9/myvars.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'utils.dart';
 import 'mc_client.dart';
+import 'myvars.dart';
 
 void main() async {
   await getOperatingSystem(); // get operating system name
@@ -44,7 +44,7 @@ accounts.json : store account information (Microsoft or Mojang) and is stored in
 Future<void> setupAppDataPath() async {
   // the application data directory
   final directory = await getApplicationSupportDirectory();
-  final appPath = '${directory.path}/$appName';
+  final appPath = '${directory.path}/${appName}';
   appDataPath = appPath.toString();
 
   print('Application data path: $appDataPath');

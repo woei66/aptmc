@@ -10,10 +10,43 @@ import 'myvars.dart';
 class MCClient {
   static Future<void> setup(String? versionNum) async {
     try {
-      getClientVersion(versionNum);
-    } catch (e) {
-      print("exception: ${e}");
+      print('appDataPath=${appDataPath}');
+      javaPath = await getJDKPath(); // get jdk complete path
+      print('javaPath=${javaPath}');
+      await getClientVersion(versionNum);
+      await prepareLaunchCommmand();
+    } catch (e, stackTrace) {
+      print('[exception] catch ${e}');
+      print(stackTrace);
     }
+  }
+
+  // get available jdk path
+  static Future<String?> getJDKPath() async {
+    String command = Platform.isWindows ? 'where' : 'which';
+    String javaExecutable = 'java';
+    List<String> jvmPath = [];
+
+    var javaPathResult = await Process.run(command, [javaExecutable]);
+    if (javaPathResult.exitCode != 0 || javaPathResult.stdout.isEmpty) {
+      print('Java is not installed or not in PATH.');
+      return null;
+    }
+
+    var javaPaths = javaPathResult.stdout.trim().split('\n');
+    //print('Java executable paths:');
+    for (var path in javaPaths) {
+      jvmPath.add(path);
+    }
+    if (jvmPath.length > 1) {
+      return jvmPath[0];
+    }
+  }
+
+  // preare complete console command string for Minecraft launche
+  static Future<void> prepareLaunchCommmand() async {
+    String launcherCommand = '${javaPath} ${jvmArgs}';
+    print('launcherCommand=${launcherCommand}');
   }
 
   // get version information
@@ -74,18 +107,21 @@ class MCClient {
       } else {
         print('Error: the response is failed.');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('[exception] catch ${e}');
+      print(stackTrace);
     }
   }
 
   static Future<void> parseGameArgument(String versionId, var jsonData) async {
     final game = jsonData['arguments']['game'];
     List<String> args = [];
+
     for (int i = 0; i < game.length; i++) {
-      if (game[i]['rules'] != null) {
+      if (game[i] is Map<String, dynamic> && game[i]['rules'] == null) {
         // TODO
-      } else {
+        print(game[i]);
+      } else if (game[i] is String) {
         args.add(game[i]);
       }
     }
@@ -106,7 +142,7 @@ class MCClient {
     final jvm = jsonData['arguments']['jvm'];
     List<String> args = [];
     for (int i = 0; i < jvm.length; i++) {
-      if (jvm[i]['rules'] != null) {
+      if (jvm[i] is Map<String, dynamic> && jvm[i]['rules'] == null) {
         final rules = jvm[i]['rules'];
         for (int j = 0; j < rules.length; j++) {
           if (rules[j]['os']['name'] == osName) {
@@ -115,7 +151,7 @@ class MCClient {
             }
           }
         }
-      } else {
+      } else if (jvm[i] is String) {
         args.add(jvm[i]);
       }
     }
@@ -144,7 +180,7 @@ class MCClient {
 
     // get Minecraft client jar file
     clientFile = '${appDataPath}/jar/${versionId}-client.jar';
-    await createDirectoryIfNotExists(clientFile!);
+    await ensureDirectoryExists(clientFile!);
     print('[debug] client file= ${clientFile}');
     await DownloadFile.download(clientUrl, clientFile!);
     //await DownloadFile.checkFile(clientFile!, clientSize, clientSha1);
@@ -175,34 +211,28 @@ class MCClient {
     final assetTotalSize = jsonData['assetIndex']['totalSize'];
     final assetSha1 = jsonData['assetIndex']['sha1'];
     final assetJsonFile = '${appDataPath}/assets/indexes/${assetId}.json';
+    //await ensureDirectoryExists(assetJsonFile);
     if (!File(assetJsonFile).existsSync()) {
-      DownloadFile.download(assetUrl, assetJsonFile);
+      print("[debug1] ${assetJsonFile} directory is not extsed");
+      await DownloadFile.download(assetUrl, assetJsonFile);
+    } else {
+      print("[debug2] ${assetJsonFile} directory is extsed");
     }
     Map<String, dynamic> index =
         json.decode(File(assetJsonFile).readAsStringSync());
     List<void Function()> funcs = [];
     //List<Map<String, String>> infos = [];
 
-    index["objects"].forEach((key, value) {
+    index["objects"].forEach((key, value) async {
       String hash = value["hash"];
       String subhash = hash.substring(0, 2);
       final assetfile = '${appDataPath}/objects/${subhash}/${hash}';
       final assetUrl =
           'https://resources.download.minecraft.net/${subhash}/${hash}';
       if (!File(assetfile).existsSync()) {
-        DownloadFile.download(assetUrl, assetfile);
+        await DownloadFile.download(assetUrl, assetfile);
       }
     });
-  }
-
-  // create directory if not exists
-  static Future<void> createDirectoryIfNotExists(String filePath) async {
-    final directory = Directory(filePath).parent;
-
-    if (!directory.existsSync()) {
-      print('Directory does not exist. Creating: ${directory.path}');
-      directory.createSync(recursive: true);
-    }
   }
 }
 
