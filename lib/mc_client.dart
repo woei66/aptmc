@@ -137,7 +137,7 @@ class MCClient {
     for (int i = 0; i < game.length; i++) {
       if (game[i] is Map<String, dynamic> && game[i]['rules'] == null) {
         // TODO
-        print(game[i]);
+        //print(game[i]);
       } else if (game[i] is String) {
         args.add(game[i]);
       }
@@ -224,6 +224,9 @@ class MCClient {
         final libName =
             library["name"]; // "com.google.guava:failureaccess:1.0.1"
         final file = '${appDataPath}/libraries/${libraryPath}';
+
+        print(
+            '[debug] download ${i + 1}/${jsonData["libraries"].length} ${file}');
         await ensureDirectoryExists(file);
         await downloader.fetch(libraryUrl, file);
       }
@@ -256,10 +259,13 @@ class MCClient {
       List<void Function()> funcs = [];
       //List<Map<String, String>> infos = [];
 
+      int i = 0;
       index["objects"].forEach((key, value) async {
+        i++;
         String hash = value["hash"];
         String subhash = hash.substring(0, 2);
-        final assetfile = '${appDataPath}/objects/${subhash}/${hash}';
+        final assetfile = '${appDataPath}/assets/objects/${subhash}/${hash}';
+        print('[debug] download ${i} ${assetfile}');
         await ensureDirectoryExists(assetfile);
         final assetUrl =
             'https://resources.download.minecraft.net/${subhash}/${hash}';
