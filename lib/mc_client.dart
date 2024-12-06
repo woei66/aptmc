@@ -8,7 +8,10 @@ import 'download_file.dart';
 import 'myvars.dart';
 
 class MCClient {
-  static Future<void> setup(String? versionNum) async {
+  // keep 1 http request to minecraft server to reduce server loading
+  final downloader = DownloadFile(2);
+
+  Future<void> prepare(String? versionNum) async {
     try {
       print('appDataPath=${appDataPath}');
       javaPath = await getJDKPath(); // get jdk complete path
@@ -18,74 +21,87 @@ class MCClient {
     } catch (e, stackTrace) {
       print('[exception] catch ${e}');
       print(stackTrace);
+      throw Exception(e);
     }
   }
 
   // get available jdk path
-  static Future<String?> getJDKPath() async {
+  Future<String?> getJDKPath() async {
     String command = Platform.isWindows ? 'where' : 'which';
     String javaExecutable = 'java';
     List<String> jvmPath = [];
 
-    var javaPathResult = await Process.run(command, [javaExecutable]);
-    if (javaPathResult.exitCode != 0 || javaPathResult.stdout.isEmpty) {
-      print('Java is not installed or not in PATH.');
-      return null;
-    }
+    try {
+      var javaPathResult = await Process.run(command, [javaExecutable]);
+      if (javaPathResult.exitCode != 0 || javaPathResult.stdout.isEmpty) {
+        print('Java is not installed or not in PATH.');
+        return null;
+      }
 
-    var javaPaths = javaPathResult.stdout.trim().split('\n');
-    //print('Java executable paths:');
-    for (var path in javaPaths) {
-      jvmPath.add(path);
-    }
-    if (jvmPath.length > 1) {
-      return jvmPath[0];
+      var javaPaths = javaPathResult.stdout.trim().split('\n');
+      //print('Java executable paths:');
+      for (var path in javaPaths) {
+        jvmPath.add(path);
+      }
+      if (jvmPath.length > 1) {
+        return jvmPath[0];
+      }
+    } catch (e, stackStace) {
+      print('exception: ${e}');
+      print(stackStace);
+      throw Exception(e);
     }
   }
 
   // preare complete console command string for Minecraft launche
-  static Future<void> prepareLaunchCommmand() async {
+  Future<void> prepareLaunchCommmand() async {
     String launcherCommand = '${javaPath} ${jvmArgs}';
     print('launcherCommand=${launcherCommand}');
   }
 
   // get version information
-  static Future<void> getClientVersion(String? versionNum) async {
-    final response = await http.get(Uri.parse(myvars.clientInfoUrl));
-    if (response.statusCode == 200) {
-      // save version file to local disk
-      DownloadFile.download(
-          myvars.clientInfoUrl, '${appDataPath}/meta/version_manifest.json');
-      // decode response data
-      final jsonData = jsonDecode(response.body);
-      final release = jsonData['latest']['release'];
-      final snapshot = jsonData['latest']['snapshot'];
+  Future<void> getClientVersion(String? versionNum) async {
+    try {
+      final response = await http.get(Uri.parse(myvars.clientInfoUrl));
+      if (response.statusCode == 200) {
+        // save version file to local disk
+        downloader.fetch(
+            myvars.clientInfoUrl, '${appDataPath}/meta/version_manifest.json');
+        // decode response data
+        final jsonData = jsonDecode(response.body);
+        final release = jsonData['latest']['release'];
+        final snapshot = jsonData['latest']['snapshot'];
 
-      versionNum ??= release;
+        versionNum ??= release;
 
-      List versions = jsonData['versions'];
-      print("[debug] client version=${versionNum}");
-      for (final version in versions) {
-        if (version['id'] == versionNum) {
-          // "https://piston-meta.moja…04e4649/1.21.4-pre3.json"
-          final versionUrl = version['url'];
-          final versionId = version['id']; // 	"1.21.4-pre3"
-          final versionType = version['type']; // "2024-11-29T09:27:51+00:00"
-          final versionTime = version['time']; // "2024-11-26T15:07:29+00:00"
-          final versionReleaseTime = version['releaseTime'];
+        List versions = jsonData['versions'];
+        print("[debug] client version=${versionNum}");
+        for (final version in versions) {
+          if (version['id'] == versionNum) {
+            // "https://piston-meta.moja…04e4649/1.21.4-pre3.json"
+            final versionUrl = version['url'];
+            final versionId = version['id']; // 	"1.21.4-pre3"
+            final versionType = version['type']; // "2024-11-29T09:27:51+00:00"
+            final versionTime = version['time']; // "2024-11-26T15:07:29+00:00"
+            final versionReleaseTime = version['releaseTime'];
 
-          instanceName ??= versionId;
+            instanceName ??= versionId;
 
-          parseVersion(versionId, versionUrl);
+            parseVersion(versionId, versionUrl);
 
-          break;
+            break;
+          }
         }
       }
+    } catch (e, stackStace) {
+      print('[exception] ${e}');
+      print(stackStace);
+      throw Exception(e);
     }
   }
 
   // parse version detail
-  static Future<void> parseVersion(String versionId, String url) async {
+  Future<void> parseVersion(String versionId, String url) async {
     try {
       final response = await http.get(Uri.parse(url));
       print('[debug] clientInfoUrl = ${url}');
@@ -93,7 +109,7 @@ class MCClient {
         // save to local disk
         final versionJsonFile = '${appDataPath}/meta/${versionId}.json';
         if (!File(versionJsonFile).existsSync()) {
-          DownloadFile.download(url, versionJsonFile);
+          downloader.fetch(url, versionJsonFile);
         }
 
         final jsonData = jsonDecode(response.body);
@@ -110,10 +126,11 @@ class MCClient {
     } catch (e, stackTrace) {
       print('[exception] catch ${e}');
       print(stackTrace);
+      throw Exception(e);
     }
   }
 
-  static Future<void> parseGameArgument(String versionId, var jsonData) async {
+  Future<void> parseGameArgument(String versionId, var jsonData) async {
     final game = jsonData['arguments']['game'];
     List<String> args = [];
 
@@ -130,7 +147,8 @@ class MCClient {
       print("[debug] game arguments=${gameArgs}");
     }
   }
-// yggdrasil: the authentication system for Minecraft after 1.6-pre
+
+  // yggdrasil: the authentication system for Minecraft after 1.6-pre
   // yggdrasil: using access token to replace the user/password
   // "--username"
   // "${auth_player_name}"
@@ -138,7 +156,7 @@ class MCClient {
   // "${auth_uuid}"
 
   // parse JVM arguments
-  static Future<void> parseJVMArgument(String versionId, var jsonData) async {
+  Future<void> parseJVMArgument(String versionId, var jsonData) async {
     final jvm = jsonData['arguments']['jvm'];
     List<String> args = [];
     for (int i = 0; i < jvm.length; i++) {
@@ -157,12 +175,12 @@ class MCClient {
     }
     if (args.length > 0) {
       jvmArgs = args.join(' ');
-      print("[debug] JVM arguments=${jvmArgs}");
+      print("[debug] JVM arguments = ${jvmArgs}");
     }
   }
 
   // parse launcher jar file and download to save in local disk
-  static Future<void> parseLauncherFile(String versionId, var jsonData) async {
+  Future<void> parseLauncherFile(String versionId, var jsonData) async {
     final downloads = jsonData['downloads'];
     // Minecraft launcher download
     final clientSha1 = downloads['client']['sha1'];
@@ -178,32 +196,46 @@ class MCClient {
     final minimumLauncherVersion = jsonData['minimumLauncherVersion'];
     final releaseTime = jsonData['releaseTime'];
 
-    // get Minecraft client jar file
-    clientFile = '${appDataPath}/jar/${versionId}-client.jar';
-    await ensureDirectoryExists(clientFile!);
-    print('[debug] client file= ${clientFile}');
-    await DownloadFile.download(clientUrl, clientFile!);
-    //await DownloadFile.checkFile(clientFile!, clientSize, clientSha1);
+    try {
+      // get Minecraft client jar file
+      clientFile = '${appDataPath}/jar/${versionId}-client.jar';
+      await ensureDirectoryExists(clientFile!);
+      print('[debug] client jar file= ${clientFile}');
+      await downloader.fetch(clientUrl, clientFile!);
+      //await downloader.checkFile(clientFile!, clientSize, clientSha1);
+    } catch (e, stackStace) {
+      print('exception: ${e}');
+      print(stackStace);
+      throw Exception(e);
+    }
   }
 
   // parse libraris and download to save in local disk
-  static Future<void> parseLibraris(String versionId, var jsonData) async {
-    for (int i = 0; i < jsonData["libraries"].length; i++) {
-      Map<String, dynamic> library = jsonData["libraries"][i];
-      final libraryPath = library["downloads"]["artifact"][
-          "path"]; // 	"com/google/guava/failureaccess/1.0.1/failureaccess-1.0.1.jar"
-      final libraryUrl = library["downloads"]["artifact"][
-          "url"]; // 	"https://libraries.minecraft.net/ca/weblite/java-objc-bridge/1.1/java-objc-bridge-1.1.jar"
-      final libSha1 = library["downloads"]["artifact"]["sha1"];
-      final libSize = library["downloads"]["artifact"]["size"];
-      final libName = library["name"]; // "com.google.guava:failureaccess:1.0.1"
-      final file = '${appDataPath}/libraries/${libraryPath}';
-      await DownloadFile.download(libraryUrl, file);
+  Future<void> parseLibraris(String versionId, var jsonData) async {
+    try {
+      for (int i = 0; i < jsonData["libraries"].length; i++) {
+        Map<String, dynamic> library = jsonData["libraries"][i];
+        final libraryPath = library["downloads"]["artifact"][
+            "path"]; // 	"com/google/guava/failureaccess/1.0.1/failureaccess-1.0.1.jar"
+        final libraryUrl = library["downloads"]["artifact"][
+            "url"]; // 	"https://libraries.minecraft.net/ca/weblite/java-objc-bridge/1.1/java-objc-bridge-1.1.jar"
+        final libSha1 = library["downloads"]["artifact"]["sha1"];
+        final libSize = library["downloads"]["artifact"]["size"];
+        final libName =
+            library["name"]; // "com.google.guava:failureaccess:1.0.1"
+        final file = '${appDataPath}/libraries/${libraryPath}';
+        await ensureDirectoryExists(file);
+        await downloader.fetch(libraryUrl, file);
+      }
+    } catch (e, stackStace) {
+      print('exception: ${e}');
+      print(stackStace);
+      throw Exception(e);
     }
   }
 
   // parse assets and download to local disk
-  static Future<void> parseAsset(String versionId, var jsonData) async {
+  Future<void> parseAsset(String versionId, var jsonData) async {
     // asset details
     final assetId = jsonData['assetIndex']['id'];
     final assetUrl = jsonData['assetIndex']['url'];
@@ -212,27 +244,34 @@ class MCClient {
     final assetSha1 = jsonData['assetIndex']['sha1'];
     final assetJsonFile = '${appDataPath}/assets/indexes/${assetId}.json';
     //await ensureDirectoryExists(assetJsonFile);
-    if (!File(assetJsonFile).existsSync()) {
-      print("[debug1] ${assetJsonFile} directory is not extsed");
-      await DownloadFile.download(assetUrl, assetJsonFile);
-    } else {
-      print("[debug2] ${assetJsonFile} directory is extsed");
-    }
-    Map<String, dynamic> index =
-        json.decode(File(assetJsonFile).readAsStringSync());
-    List<void Function()> funcs = [];
-    //List<Map<String, String>> infos = [];
-
-    index["objects"].forEach((key, value) async {
-      String hash = value["hash"];
-      String subhash = hash.substring(0, 2);
-      final assetfile = '${appDataPath}/objects/${subhash}/${hash}';
-      final assetUrl =
-          'https://resources.download.minecraft.net/${subhash}/${hash}';
-      if (!File(assetfile).existsSync()) {
-        await DownloadFile.download(assetUrl, assetfile);
+    try {
+      if (!File(assetJsonFile).existsSync()) {
+        //print("[debug] ${assetJsonFile} directory is not extsed");
+        await downloader.fetch(assetUrl, assetJsonFile);
+      } else {
+        //print("[debug] ${assetJsonFile} directory exists");
       }
-    });
+      Map<String, dynamic> index =
+          json.decode(File(assetJsonFile).readAsStringSync());
+      List<void Function()> funcs = [];
+      //List<Map<String, String>> infos = [];
+
+      index["objects"].forEach((key, value) async {
+        String hash = value["hash"];
+        String subhash = hash.substring(0, 2);
+        final assetfile = '${appDataPath}/objects/${subhash}/${hash}';
+        await ensureDirectoryExists(assetfile);
+        final assetUrl =
+            'https://resources.download.minecraft.net/${subhash}/${hash}';
+        if (!File(assetfile).existsSync()) {
+          await downloader.fetch(assetUrl, assetfile);
+        }
+      });
+    } catch (e, stackStace) {
+      print('exception: ${e}');
+      print(stackStace);
+      throw Exception(e);
+    }
   }
 }
 

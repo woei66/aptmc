@@ -1,4 +1,4 @@
-package com.example.mmc9
+package com.example.aptmc
 
 import io.flutter.embedding.android.FlutterActivity
 

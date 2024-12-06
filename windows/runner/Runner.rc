@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "mmc9" "\0"
+            VALUE "FileDescription", "aptmc" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "mmc9" "\0"
+            VALUE "InternalName", "aptmc" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2024 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "mmc9.exe" "\0"
-            VALUE "ProductName", "mmc9" "\0"
+            VALUE "OriginalFilename", "aptmc.exe" "\0"
+            VALUE "ProductName", "aptmc" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

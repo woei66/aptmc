@@ -1,6 +1,6 @@
 {
-    "name": "mmc9",
-    "short_name": "mmc9",
+    "name": "aptmc",
+    "short_name": "aptmc",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

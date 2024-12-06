@@ -1,6 +1,6 @@
-# mmc9
+# aptmc
 
-MMC9 is a Minecraft Launcher (Client)
+aptmc is a Minecraft Launcher (Client)
 Cross platform
 High performance (fps=)
 

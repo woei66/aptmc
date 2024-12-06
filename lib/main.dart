@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'utils.dart';
 import 'mc_client.dart';
 import 'myvars.dart';
+import 'download_file.dart';
 
 void main() async {
   await getOperatingSystem(); // get operating system name
@@ -76,7 +77,7 @@ class MinecraftLauncher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MMC9: Minecraft Launcher',
+      title: 'APTMC Launcher',
       theme: ThemeData(
         primarySwatch: Colors.green,
       ),
@@ -127,7 +128,8 @@ class _LauncherHomePageState extends State<LauncherHomePage> {
 
     try {
       // get client version and download client jar file
-      await MCClient.setup(null);
+      final mcClient = MCClient();
+      await mcClient.prepare(null);
       setState(() {
         _statusMessage = "Minecraft downloaded successfully.";
         _isDownloading = false;
