@@ -20,7 +20,7 @@ class DownloadFile {
 
   DownloadFile(this.maxConcurrentRequests);
 
-// 等待可用的請求槽位
+// wait available slot
   Future<void> _waitForAvailableSlot() async {
     if (_currentActiveRequests < maxConcurrentRequests) {
       _currentActiveRequests++;
@@ -33,7 +33,7 @@ class DownloadFile {
     _currentActiveRequests++;
   }
 
-  // 釋放一個請求槽位
+  // release the slot
   void _releaseSlot() {
     _currentActiveRequests--;
 
@@ -80,7 +80,7 @@ class DownloadFile {
       print(stackTrace);
       throw Exception(e);
     } finally {
-      // 釋放請求槽位
+      // release the slot
       _releaseSlot();
     }
   }

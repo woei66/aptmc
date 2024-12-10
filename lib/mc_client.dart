@@ -4,13 +4,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'utils.dart';
-import 'download_file.dart';
+//import 'download_file.dart';
 import 'myvars.dart';
+import 'rust_downloader.dart';
 
 class MCClient {
   // keep 1 http request to minecraft server to reduce server loading
-  final downloader = DownloadFile(2);
-
+  //final downloader = DownloadFile(2);
+  final downloader = RustDownloader(2);
   Future<void> prepare(String? versionNum) async {
     try {
       print('appDataPath=${appDataPath}');
