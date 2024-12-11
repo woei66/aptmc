@@ -9,6 +9,8 @@ vendor/
 
 .DS_Store
 *.patch
+# ignore rust cross-platoform library
+assets/rust/*
 
 # Miscellaneous
 *.class
