@@ -2,8 +2,11 @@ import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
 
+// copy target/release/librust_downloader.so to assets/rust/linux/librust_downloader.so
+// add assets/rust/linux/librust_downloader.so to pubspec.yaml
+
 final DynamicLibrary nativeDownloader = Platform.isLinux
-    ? DynamicLibrary.open("assets/lib/librust_downloader.so")
+    ? DynamicLibrary.open("assets/rust/linux/librust_downloader.so")
     : DynamicLibrary.process();
 
 class RustDownloader {
@@ -19,17 +22,23 @@ class RustDownloader {
 
   // Fetch method
   Future<void> fetch(String url, String filename) async {
-    final fetchFile = nativeDownloader.lookupFunction<
-        Void Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>),
-        void Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>)>(
-      'fetch_file',
-    );
+    try {
+      final fetchFile = nativeDownloader.lookupFunction<
+          Void Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>),
+          void Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>)>(
+        'fetch_file',
+      );
 
-    final urlC = url.toNativeUtf8();
-    final filenameC = filename.toNativeUtf8();
-    fetchFile(_downloader, urlC, filenameC);
-    malloc.free(urlC);
-    malloc.free(filenameC);
+      final urlC = url.toNativeUtf8();
+      final filenameC = filename.toNativeUtf8();
+      fetchFile(_downloader, urlC, filenameC);
+      malloc.free(urlC);
+      malloc.free(filenameC);
+    } catch (e, stackTrace) {
+      print('[exception][ffi] {$e}');
+      print(stackTrace);
+      throw Exception(e);
+    }
   }
 
   // Destructor

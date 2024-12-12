@@ -32,7 +32,7 @@ String? clientFile;
 String? instanceName;
 String? appDataPath;
 // application name
-const appName = 'MMC9Launcher';
+const appName = 'aptmc';
 // operating system
 String? osName;
 // JVM arguments

@@ -2,11 +2,11 @@ import 'myvars.dart' as myvars;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import 'utils.dart';
 //import 'download_file.dart';
 import 'myvars.dart';
 import 'rust_downloader.dart';
+import 'java_path_finder.dart';
 
 class MCClient {
   // keep 1 http request to minecraft server to reduce server loading
@@ -15,7 +15,15 @@ class MCClient {
   Future<void> prepare(String? versionNum) async {
     try {
       print('appDataPath=${appDataPath}');
-      javaPath = await getJDKPath(); // get jdk complete path
+      final javaPath = await JavaPathFinder.findJavaExecutable();
+      if (javaPath != null) {
+        print('Java path: $javaPath');
+        final version = await JavaPathFinder.getJavaVersion(javaPath);
+        print('Version: $version');
+      } else {
+        print('[error] Java executable not found');
+        throw Exception('Java executable not found');
+      }
       print('javaPath=${javaPath}');
       await getClientVersion(versionNum);
       await prepareLaunchCommmand();
@@ -26,72 +34,64 @@ class MCClient {
     }
   }
 
-  // get available jdk path
-  Future<String?> getJDKPath() async {
-    String command = Platform.isWindows ? 'where' : 'which';
-    String javaExecutable = 'java';
-    List<String> jvmPath = [];
-
-    try {
-      var javaPathResult = await Process.run(command, [javaExecutable]);
-      if (javaPathResult.exitCode != 0 || javaPathResult.stdout.isEmpty) {
-        print('Java is not installed or not in PATH.');
-        return null;
-      }
-
-      var javaPaths = javaPathResult.stdout.trim().split('\n');
-      //print('Java executable paths:');
-      for (var path in javaPaths) {
-        jvmPath.add(path);
-      }
-      if (jvmPath.length > 1) {
-        return jvmPath[0];
-      }
-    } catch (e, stackStace) {
-      print('exception: ${e}');
-      print(stackStace);
-      throw Exception(e);
-    }
-  }
-
   // preare complete console command string for Minecraft launche
   Future<void> prepareLaunchCommmand() async {
     String launcherCommand = '${javaPath} ${jvmArgs}';
-    print('launcherCommand=${launcherCommand}');
+    print('[debug] launcherCommand=${launcherCommand}');
   }
 
   // get version information
   Future<void> getClientVersion(String? versionNum) async {
+    final versionFile = '${appDataPath}/meta/version_manifest.json';
+    Map<String, dynamic> jsonData = {};
+
+    if (!File(versionFile).existsSync()) {
+      // the version_manifest.json not exists
+      try {
+        final response = await http.get(Uri.parse(myvars.clientInfoUrl));
+        if (response.statusCode == 200) {
+          print(
+              '[debug][dart] download file=${versionFile}, url=${myvars.clientInfoUrl}');
+          // save version file to local disk
+          downloader.fetch(myvars.clientInfoUrl, versionFile);
+          jsonData = jsonDecode(response.body);
+        } else {}
+      } catch (e, stackStace) {
+        print('[exception] ${e}');
+        print(stackStace);
+        throw Exception(e);
+      }
+    } else {
+      // the version_manifest.json exists
+      try {
+        File file = File(versionFile);
+        String contents = file.readAsStringSync();
+        jsonData = json.decode(contents);
+      } catch (e, stackStace) {
+        print('[exception] ${e}');
+        print(stackStace);
+        throw Exception(e);
+      }
+    }
     try {
-      final response = await http.get(Uri.parse(myvars.clientInfoUrl));
-      if (response.statusCode == 200) {
-        // save version file to local disk
-        downloader.fetch(
-            myvars.clientInfoUrl, '${appDataPath}/meta/version_manifest.json');
-        // decode response data
-        final jsonData = jsonDecode(response.body);
-        final release = jsonData['latest']['release'];
-        final snapshot = jsonData['latest']['snapshot'];
+      // decode json
+      final release = jsonData['latest']['release'];
+      final snapshot = jsonData['latest']['snapshot'];
+      versionNum ??= release;
+      List versions = jsonData['versions'];
+      print("[debug] client version=${versionNum}");
+      for (final version in versions) {
+        if (version['id'] == versionNum) {
+          // "https://piston-meta.moja…04e4649/1.21.4-pre3.json"
+          final versionUrl = version['url'];
+          final versionId = version['id']; // 	"1.21.4-pre3"
+          final versionType = version['type']; // "2024-11-29T09:27:51+00:00"
+          final versionTime = version['time']; // "2024-11-26T15:07:29+00:00"
+          final versionReleaseTime = version['releaseTime'];
 
-        versionNum ??= release;
-
-        List versions = jsonData['versions'];
-        print("[debug] client version=${versionNum}");
-        for (final version in versions) {
-          if (version['id'] == versionNum) {
-            // "https://piston-meta.moja…04e4649/1.21.4-pre3.json"
-            final versionUrl = version['url'];
-            final versionId = version['id']; // 	"1.21.4-pre3"
-            final versionType = version['type']; // "2024-11-29T09:27:51+00:00"
-            final versionTime = version['time']; // "2024-11-26T15:07:29+00:00"
-            final versionReleaseTime = version['releaseTime'];
-
-            instanceName ??= versionId;
-
-            parseVersion(versionId, versionUrl);
-
-            break;
-          }
+          instanceName ??= versionId;
+          parseVersion(versionId, versionUrl);
+          break;
         }
       }
     } catch (e, stackStace) {
@@ -103,32 +103,41 @@ class MCClient {
 
   // parse version detail
   Future<void> parseVersion(String versionId, String url) async {
-    try {
-      final response = await http.get(Uri.parse(url));
-      print('[debug] clientInfoUrl = ${url}');
-      if (response.statusCode == 200) {
-        // save to local disk
-        final versionJsonFile = '${appDataPath}/meta/${versionId}.json';
-        if (!File(versionJsonFile).existsSync()) {
-          downloader.fetch(url, versionJsonFile);
-        }
+    Map<String, dynamic> jsonData = {};
+    final versionJsonFile = '${appDataPath}/meta/${versionId}.json';
 
-        final jsonData = jsonDecode(response.body);
-        // parse response
-        await parseGameArgument(versionId, jsonData); // launcher
-        await parseJVMArgument(versionId, jsonData); // JVM
-        await parseLauncherFile(versionId,
-            jsonData); // parse and download Minecraft launcher jar file
-        await parseAsset(versionId, jsonData); // parse & download assets
-        await parseLibraris(versionId, jsonData); // parse and download libraris
+    try {
+      if (!File(versionJsonFile).existsSync()) {
+        // file not exists
+        print('[debug] download ${versionJsonFile} from ${url}');
+        final response = await http.get(Uri.parse(url));
+        if (response.statusCode == 200) {
+          // save to local disk
+          downloader.fetch(url, versionJsonFile);
+          jsonData = jsonDecode(response.body);
+        } else {
+          final erroString = '[error] the response is failed. ${url}';
+          print(erroString);
+          throw Exception(erroString);
+        }
       } else {
-        print('Error: the response is failed.');
+        // file exists
+        File file = File(versionJsonFile);
+        String contents = file.readAsStringSync();
+        jsonData = json.decode(contents);
       }
     } catch (e, stackTrace) {
       print('[exception] catch ${e}');
       print(stackTrace);
       throw Exception(e);
     }
+    // parse response
+    await parseGameArgument(versionId, jsonData); // launcher
+    await parseJVMArgument(versionId, jsonData); // JVM
+    await parseLauncherFile(
+        versionId, jsonData); // parse and download Minecraft launcher jar file
+    await parseAsset(versionId, jsonData); // parse & download assets
+    await parseLibraris(versionId, jsonData); // parse and download libraris
   }
 
   Future<void> parseGameArgument(String versionId, var jsonData) async {
@@ -225,11 +234,12 @@ class MCClient {
         final libName =
             library["name"]; // "com.google.guava:failureaccess:1.0.1"
         final file = '${appDataPath}/libraries/${libraryPath}';
-
-        print(
-            '[debug] download ${i + 1}/${jsonData["libraries"].length} ${file}');
-        await ensureDirectoryExists(file);
-        await downloader.fetch(libraryUrl, file);
+        if (!File(file).existsSync()) {
+          print(
+              '[debug] download ${i + 1}/${jsonData["libraries"].length} ${file}');
+          await ensureDirectoryExists(file);
+          await downloader.fetch(libraryUrl, file);
+        }
       }
     } catch (e, stackStace) {
       print('exception: ${e}');
@@ -250,7 +260,7 @@ class MCClient {
     //await ensureDirectoryExists(assetJsonFile);
     try {
       if (!File(assetJsonFile).existsSync()) {
-        //print("[debug] ${assetJsonFile} directory is not extsed");
+        print("[debug] ${assetJsonFile} directory is not extsed");
         await downloader.fetch(assetUrl, assetJsonFile);
       } else {
         //print("[debug] ${assetJsonFile} directory exists");
@@ -266,11 +276,11 @@ class MCClient {
         String hash = value["hash"];
         String subhash = hash.substring(0, 2);
         final assetfile = '${appDataPath}/assets/objects/${subhash}/${hash}';
-        print('[debug] download ${i} ${assetfile}');
-        await ensureDirectoryExists(assetfile);
+        //await ensureDirectoryExists(assetfile);
         final assetUrl =
             'https://resources.download.minecraft.net/${subhash}/${hash}';
         if (!File(assetfile).existsSync()) {
+          print('[debug] download ${i} ${assetfile}');
           await downloader.fetch(assetUrl, assetfile);
         }
       });

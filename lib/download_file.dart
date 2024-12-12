@@ -1,15 +1,8 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:crypto/crypto.dart';
-import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
-import 'package:crypto/crypto.dart';
 import 'utils.dart';
 import 'myvars.dart';
-import 'dart:async';
-import 'dart:typed_data';
 import 'dart:async';
 import 'dart:collection';
 

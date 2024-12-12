@@ -1,5 +1,5 @@
-name: aptmc_launcher
-description: "APTMC Launcher"
+name: aptmc
+description: "APTMC Minecraft Launcher"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -69,7 +69,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
 
   assets:
-    - assets/lib/librust_downloader.so
+    - assets/rust/linux/librust_downloader.so
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

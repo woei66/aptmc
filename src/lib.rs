@@ -6,8 +6,10 @@ use tokio::runtime::Runtime;
 use lazy_static::lazy_static;
 pub mod downloader;
 pub use downloader::DownloadFile;
-
+use std::str::Utf8Error;
 // .so file is located at target/release/librust_downloader.so
+// copy target/release/librust_downloader.so to assets/rust/linux/librust_downloader.so
+// add assets/rust/linux/librust_downloader.so to pubspec.yaml
 
 lazy_static::lazy_static! {
     // lazy is similar to 'late'
@@ -35,12 +37,36 @@ pub extern "C" fn fetch_file(
         &mut *downloader_ptr
     };
 
-    let url = unsafe { CStr::from_ptr(url).to_str().unwrap() };
-    let filename = unsafe { CStr::from_ptr(filename).to_str().unwrap() };
+    //let url = unsafe { CStr::from_ptr(url).to_str().unwrap() };
+    //let filename = unsafe { CStr::from_ptr(filename).to_str().unwrap() };
+    //let url = unsafe { CStr::from_ptr(url).to_str_lossy().into_owned() };
+    //let filename = unsafe { CStr::from_ptr(filename).to_str_lossy().into_owned() };
+    let url = unsafe {
+        CStr::from_ptr(url)
+            .to_str()
+            .map(String::from) // 转换为 String
+            .unwrap_or_else(|_| {
+                CStr::from_ptr(url)
+                    .to_bytes_with_nul()
+                    .iter()
+                    .cloned()
+                    .map(char::from)
+                    .collect()
+            })
+    };
 
+    let filename = unsafe {
+        match CStr::from_ptr(filename).to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => String::from_utf8_lossy(CStr::from_ptr(filename).to_bytes()).into_owned(),
+        }
+    };
     RUNTIME.lock().unwrap().spawn(async move {
-        if let Err(err) = downloader.fetch(url, filename).await {
-            eprintln!("Failed to download file: {}", err);
+        if let Err(err) = downloader.fetch(&url, &filename).await {
+            eprintln!(
+                "[error][rust] Failed to download file {} from {}: {}",
+                filename, url, err
+            );
         }
     });
 }

@@ -9,10 +9,12 @@ use std::{
 };
 use tokio::{
     fs as async_fs,
-    io::{AsyncWriteExt, AsyncReadExt},
+    io::{AsyncReadExt, AsyncWriteExt},
     sync::{Semaphore, SemaphorePermit},
 };
 
+// copy target/release/librust_downloader.so to assets/rust/linux/librust_downloader.so
+// add assets/rust/linux/librust_downloader.so to pubspec.yaml
 
 #[derive(Clone)]
 pub struct DownloadFile {
@@ -42,36 +44,39 @@ impl DownloadFile {
         let path = Path::new(filename);
 
         if path.exists() {
-            println!("[debug] {} exists", filename);
+            //println!("[debug][rust] {} exists", filename);
             return Ok(());
         }
 
         let permit = self.wait_for_available_slot().await;
-        println!("[debug] downloader fetch {}", url);
+        println!("[debug][rust] downloader fetch {}", url);
 
         if let Some(parent) = path.parent() {
             async_fs::create_dir_all(parent).await?;
         }
 
-        println!("[debug] send HTTP request {}", url);
+        println!("[debug][rust] send HTTP request {}", url);
         match self.client.get(url).send().await {
             Ok(response) => {
                 if response.status().is_success() {
                     let bytes = response.bytes().await.unwrap();
                     let mut file = async_fs::File::create(filename).await?;
                     file.write_all(&bytes).await?;
-                    println!("[debug] Download file is saved: {}", filename);
+                    println!("[debug][rust] Download file is saved: {}", filename);
                     Ok(())
                 } else {
-                    eprintln!("[error] Download failed, status = {}", response.status());
+                    eprintln!(
+                        "[error][rust] Download failed, status = {}",
+                        response.status()
+                    );
                     Err(io::Error::new(
                         io::ErrorKind::Other,
-                        "Download failed with non-200 status",
+                        "[error][rust] Download failed with non-200 status",
                     ))
                 }
             }
             Err(e) => {
-                eprintln!("[exception] {}", e);
+                eprintln!("[exception][rust] {}", e);
                 Err(io::Error::new(io::ErrorKind::Other, e))
             }
         }?;
@@ -90,14 +95,14 @@ impl DownloadFile {
         let path = Path::new(file_path);
 
         if !path.exists() {
-            eprintln!("Error: File does not exist.");
+            eprintln!("[error][rust] Error: File does not exist.");
             return Ok(());
         }
 
         let metadata = async_fs::metadata(file_path).await?;
         if metadata.len() != expected_size {
             eprintln!(
-                "Error: File size does not match. Expected {} bytes, got {} bytes.",
+                "[error][rust] Error: File size does not match. Expected {} bytes, got {} bytes.",
                 expected_size,
                 metadata.len()
             );
@@ -107,13 +112,13 @@ impl DownloadFile {
         let computed_sha1 = self.compute_sha1(file_path).await?;
         if computed_sha1 != expected_sha1 {
             eprintln!(
-                "Error: SHA1 hash does not match. Expected {}, got {}.",
+                "[error][rust] Error: SHA1 hash does not match. Expected {}, got {}.",
                 expected_sha1, computed_sha1
             );
             return Ok(());
         }
 
-        println!("File verification succeeded: Size and SHA-1 hash match.");
+        println!("[debug][rust] File verification succeeded: Size and SHA-1 hash match.");
         Ok(())
     }
 
