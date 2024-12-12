@@ -14,3 +14,8 @@ Future<void> ensureDirectoryExists(String filePath) async {
     await subDir.create(recursive: true);
   }*/
 }
+
+Future<String> sanitizeString(String input) async {
+  // instance directory name
+  return input.replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+}

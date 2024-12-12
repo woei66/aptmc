@@ -39,3 +39,7 @@ String? osName;
 String? jvmArgs;
 String? gameArgs;
 String? javaPath;
+// instances name
+//List<String> mcInstances = [];
+// instances icon
+List<Map<String, Object?>> instanceIcons = [];

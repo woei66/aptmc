@@ -8,8 +8,17 @@ import 'myvars.dart';
 import 'download_file.dart';
 
 void main() async {
-  await getOperatingSystem(); // get operating system name
-  await setupAppDataPath(); // application data directory
+  // the application data directory
+  final directory = await getApplicationSupportDirectory();
+  final appPath = '${directory.path}/${appName}';
+  appDataPath = appPath.toString();
+  //print('Application data path: $appDataPath');
+  // get all Minecraft instances
+  await getInstances();
+  // get operating system name
+  await getOperatingSystem();
+  // application data directory
+  await setupAppDataPath();
   runApp(MinecraftLauncher());
 }
 
@@ -42,13 +51,6 @@ jar/ : specific Minecraft main .jar files. Ex: daemon
 accounts.json : store account information (Microsoft or Mojang) and is stored in encrypted for sing-in automatically.
 */
 Future<void> setupAppDataPath() async {
-  // the application data directory
-  final directory = await getApplicationSupportDirectory();
-  final appPath = '${directory.path}/${appName}';
-  appDataPath = appPath.toString();
-
-  print('Application data path: $appDataPath');
-
   List<String> subDirs = [
     'assets',
     'cache',
@@ -69,6 +71,57 @@ Future<void> setupAppDataPath() async {
     if (!await subDir.exists()) {
       await subDir.create(recursive: true);
     }
+  }
+}
+
+// get all instances
+Future<void> getInstances() async {
+  try {
+    //mcInstances.clear();
+    instanceIcons.clear();
+
+    final instanceDir = '${appDataPath}/instances';
+    final directory = Directory(instanceDir!);
+    if (!directory.existsSync()) {
+      await ensureDirectoryExists(appDataPath!);
+    }
+
+    // append a '+' icon
+    var instanceKey = {
+      'key': 'addInstance',
+      'icon': Icons.add_circle,
+      'text': 'Add Instance',
+      'page': BottomPage(),
+      'preaction': () async {}
+    };
+    instanceIcons.add(instanceKey);
+
+    // add existing instaces
+    directory.listSync().forEach((item) async {
+      if (item is Directory) {
+        final instancecfgFile = '${item.path}/instance.cfg';
+        if (await File(instancecfgFile).exists()) {
+          final instanceName = item.path.split('/').last;
+          //mcInstances.add(instanceName);
+          var instanceKey = {
+            'key': await sanitizeString(instanceName),
+            'icon': Icons.sports_esports,
+            'text': instanceName,
+            'page': BottomPage(),
+            'preaction': () async {}
+          };
+          instanceIcons.add(instanceKey);
+          //print('[debug] instance found ${instanceName}');
+        } else {
+          // no instance.cfg file, the directory should be deleted??
+          print('[debug] directory exists but instance.cfg not found ${item}');
+        }
+      }
+    });
+  } catch (e, stackTrace) {
+    print('[exception] Failed to get Minecraft instances: $e');
+    print(stackTrace);
+    throw Exception('Failed to get Minecraft instances: $e');
   }
 }
 
@@ -165,9 +218,9 @@ class _LauncherHomePageState extends State<LauncherHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Minecraft Launcher'),
+        title: Text('APTMC Minecraft'),
       ),
-      body: Padding(
+      /*body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -193,6 +246,112 @@ class _LauncherHomePageState extends State<LauncherHomePage> {
             ],
           ],
         ),
+      ),*/
+      body: MainPage(),
+      bottomNavigationBar: const BottomPage(),
+    );
+  }
+}
+
+class MainPage extends StatelessWidget {
+  MainPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final iconsPerRow = (constraints.maxWidth / 96).floor();
+        return GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: iconsPerRow,
+            crossAxisSpacing: 8.0,
+            mainAxisSpacing: 8.0,
+          ),
+          itemCount: instanceIcons.length,
+          itemBuilder: (context, index) {
+            final item = instanceIcons[index];
+            return InkWell(
+              onTap: () async {
+                // execute preaction if defined
+                if (item['preaction'] != null) {
+                  await (item['preaction'] as Function)();
+                }
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => item['page'] as Widget));
+              },
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Icon(item['icon'] as IconData, size: 36),
+                  Text(item['text'] as String),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class BottomPage extends StatelessWidget {
+  const BottomPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return BottomAppBar(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Align(
+                alignment: Alignment.center,
+                child: IconButton(
+                  icon: Icon(Icons.home),
+                  onPressed: () {},
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Text("Home"),
+              ),
+            ],
+          ),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Align(
+                alignment: Alignment.center,
+                child: IconButton(
+                  icon: Icon(Icons.settings),
+                  onPressed: () {},
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Text("Settings"),
+              ),
+            ],
+          ),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Align(
+                alignment: Alignment.center,
+                child: IconButton(
+                  icon: Icon(Icons.person),
+                  onPressed: () {},
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Text("Account"),
+              ),
+            ],
+          )
+        ],
       ),
     );
   }
