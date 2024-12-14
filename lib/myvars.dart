@@ -43,3 +43,4 @@ String? javaPath;
 //List<String> mcInstances = [];
 // instances icon
 List<Map<String, Object?>> instanceIcons = [];
+List<Map<String, Object?>> instanceData = [];

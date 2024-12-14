@@ -6,6 +6,10 @@ import 'utils.dart';
 import 'mc_client.dart';
 import 'myvars.dart';
 import 'download_file.dart';
+import 'home_page.dart';
+import 'management_page.dart';
+import 'dart:convert';
+import 'dart:io';
 
 void main() async {
   // the application data directory
@@ -74,11 +78,79 @@ Future<void> setupAppDataPath() async {
   }
 }
 
+// parse instance details
+Future<Map<String, String>> parseMMCPackJsonFile(String folder) async {
+  final filename = '${folder}/mmc-pack.json';
+  final file = File(filename);
+  Map<String, String> config = {};
+  print('[debug] instance config file = ${filename}');
+  try {
+    if (!file.existsSync()) {
+      // if file not exists, throw exception
+      print('[error] ${filename} not found');
+      throw Exception('[error] ${filename} not found');
+    }
+    // file exists
+    final contents = await file.readAsString();
+    final data = jsonDecode(contents);
+    String? minecraftVersion;
+    if (data is Map && data['components'] is List) {
+      final components = data['components'] as List;
+      for (final component in components) {
+        if (component is Map && component['uid'] == 'net.minecraft') {
+          config['version'] = component['version'] as String;
+        }
+      }
+    }
+    return config;
+  } catch (e, stackTrace) {
+    print('[exception] ${e}');
+    print(stackTrace);
+    throw Exception(e);
+  }
+}
+
+// parse instance.cfg file
+Future<Map<String, String>> parseInstanceCFGFile(String filePath) async {
+  final config = <String, String>{};
+
+  try {
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw Exception('[error] File not found: $filePath');
+    }
+
+    final lines = await file.readAsLines();
+
+    for (final line in lines) {
+      // skip empty or comment line
+      if (line.trim().isEmpty || line.startsWith('#')) {
+        continue;
+      }
+
+      // split and get key/value pair
+      final parts = line.split('=');
+      if (parts.length == 2) {
+        final key = parts[0].trim();
+        final value = parts[1].trim();
+        config[key] = value;
+      } else {
+        print('[error] Ignored malformed line: $line');
+      }
+    }
+  } catch (e) {
+    print('[error] Error reading config file: $e');
+    throw Exception(e);
+  }
+  return config;
+}
+
 // get all instances
 Future<void> getInstances() async {
   try {
     //mcInstances.clear();
     instanceIcons.clear();
+    instanceData.clear();
 
     final instanceDir = '${appDataPath}/instances';
     final directory = Directory(instanceDir!);
@@ -91,7 +163,7 @@ Future<void> getInstances() async {
       'key': 'addInstance',
       'icon': Icons.add_circle,
       'text': 'Add Instance',
-      'page': BottomPage(),
+      'page': ManagementPage(),
       'preaction': () async {}
     };
     instanceIcons.add(instanceKey);
@@ -103,14 +175,38 @@ Future<void> getInstances() async {
         if (await File(instancecfgFile).exists()) {
           final instanceName = item.path.split('/').last;
           //mcInstances.add(instanceName);
-          var instanceKey = {
+          final instance = {
             'key': await sanitizeString(instanceName),
             'icon': Icons.sports_esports,
             'text': instanceName,
-            'page': BottomPage(),
+            'page': ManagementPage(),
             'preaction': () async {}
           };
-          instanceIcons.add(instanceKey);
+          instanceIcons.add(instance);
+          Map<String, String> config1 =
+              await parseInstanceCFGFile(instancecfgFile);
+          Map<String, String> config2 = await parseMMCPackJsonFile(item.path);
+          final launchTime = DateTime.fromMillisecondsSinceEpoch(
+              int.parse(config1['lastLaunchTime']!));
+          final lastTimePlayed1 =
+              Duration(seconds: int.parse(config1['lastTimePlayed']!));
+          final lastTimePlayed2 =
+              '${lastTimePlayed1.inHours} hours, ${lastTimePlayed1.inMinutes % 60} minutes';
+          final totalTimePlayed1 =
+              Duration(seconds: int.parse(config1['totalTimePlayed']!));
+          final totalTimePlayed2 =
+              '${totalTimePlayed1.inHours} hours, ${totalTimePlayed1.inMinutes % 60} minutes';
+          final data = {
+            'version': config2['version'],
+            'name': instanceName,
+            'icon': Icons.videogame_asset,
+            'lastLaunchTime': launchTime,
+            'lastTimePlayed': lastTimePlayed2,
+            'totalTimePlayed': totalTimePlayed2,
+            'page': ManagementPage(),
+            'preaction': () async {}
+          };
+          instanceData.add(data);
           //print('[debug] instance found ${instanceName}');
         } else {
           // no instance.cfg file, the directory should be deleted??
@@ -133,226 +229,7 @@ class MinecraftLauncher extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.green,
       ),
-      home: LauncherHomePage(),
-    );
-  }
-}
-
-class LauncherHomePage extends StatefulWidget {
-  @override
-  _LauncherHomePageState createState() => _LauncherHomePageState();
-}
-
-class _LauncherHomePageState extends State<LauncherHomePage> {
-  String _statusMessage = "Preparing to start...";
-  bool _isDownloading = false;
-
-  Future<void> checkForUpdates() async {
-    setState(() {
-      _statusMessage = "Checking status...";
-    });
-
-    try {
-      final url = "https://api.mojang.com/mc";
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _statusMessage = "Minecraft is the latest version";
-        });
-      } else {
-        setState(() {
-          _statusMessage = "Failed to check updates";
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _statusMessage = "There is something wrong when checking updates.";
-      });
-    }
-  }
-
-  Future<void> downloadMinecraft() async {
-    setState(() {
-      _statusMessage = "Downloading ...";
-      _isDownloading = true;
-    });
-
-    try {
-      // get client version and download client jar file
-      final mcClient = MCClient();
-      await mcClient.prepare(null);
-      setState(() {
-        _statusMessage = "Minecraft downloaded successfully.";
-        _isDownloading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _statusMessage = "Downloaded failed: $e";
-        _isDownloading = false;
-      });
-    }
-  }
-
-  Future<void> launchMinecraft() async {
-    setState(() {
-      _statusMessage = "Start Minecraft...";
-    });
-
-    final dir = await getApplicationDocumentsDirectory();
-    String launcherFile = '${dir.path}/minecraft-launcher/minecraft-launcher';
-
-    if (await File(launcherFile).exists()) {
-      await Process.start(launcherFile, [], runInShell: true);
-      setState(() {
-        _statusMessage = "Minecraft is running!";
-      });
-    } else {
-      setState(() {
-        _statusMessage = "Minecraft file is not found";
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('APTMC Minecraft'),
-      ),
-      /*body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _statusMessage,
-              style: TextStyle(fontSize: 20),
-            ),
-            SizedBox(height: 20),
-            if (!_isDownloading) ...[
-              ElevatedButton(
-                onPressed: checkForUpdates,
-                child: Text("Check updates"),
-              ),
-              ElevatedButton(
-                onPressed: downloadMinecraft,
-                child: Text("Download Minecraft"),
-              ),
-              ElevatedButton(
-                onPressed: launchMinecraft,
-                child: Text("Start Minecraft"),
-              ),
-            ],
-          ],
-        ),
-      ),*/
-      body: MainPage(),
-      bottomNavigationBar: const BottomPage(),
-    );
-  }
-}
-
-class MainPage extends StatelessWidget {
-  MainPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final iconsPerRow = (constraints.maxWidth / 96).floor();
-        return GridView.builder(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: iconsPerRow,
-            crossAxisSpacing: 8.0,
-            mainAxisSpacing: 8.0,
-          ),
-          itemCount: instanceIcons.length,
-          itemBuilder: (context, index) {
-            final item = instanceIcons[index];
-            return InkWell(
-              onTap: () async {
-                // execute preaction if defined
-                if (item['preaction'] != null) {
-                  await (item['preaction'] as Function)();
-                }
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => item['page'] as Widget));
-              },
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Icon(item['icon'] as IconData, size: 36),
-                  Text(item['text'] as String),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class BottomPage extends StatelessWidget {
-  const BottomPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomAppBar(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: IconButton(
-                  icon: Icon(Icons.home),
-                  onPressed: () {},
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Text("Home"),
-              ),
-            ],
-          ),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: IconButton(
-                  icon: Icon(Icons.settings),
-                  onPressed: () {},
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Text("Settings"),
-              ),
-            ],
-          ),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: IconButton(
-                  icon: Icon(Icons.person),
-                  onPressed: () {},
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Text("Account"),
-              ),
-            ],
-          )
-        ],
-      ),
+      home: HomePage(),
     );
   }
 }
