@@ -1,21 +1,32 @@
-MIT License
+Dual Licensing Policy
 
-Copyright (c) 2024 WEI TING LIN, and TRIPBNB CO,LTD.
+APTMC is available under a dual-licensing model:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Open Source License (GPLv3):
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The software is free and open-source under the GNU General Public License, Version 3. https://www.gnu.org/licenses/gpl-3.0.txt
+You may use, modify, and distribute the software as long as you comply with the terms of the GPLv3.
+If you distribute the software or its derivatives, you must also release your source code under the same license.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Commercial License:
+
+If you do not wish to comply with the terms of the GPLv3, you may obtain a commercial license.
+A commercial license allows you to integrate this software into proprietary projects, without the obligation to release your source code.
+Contact Information for Commercial Licensing
+To inquire about commercial licensing terms, please contact:
+
+TRIPBNB CO., LTD
+aptmc7@gmail.com
+https://tripbnb.com/
+
+By purchasing a commercial license, you receive the following benefits:
+
+Legal permission to use the software in proprietary applications.
+Priority support and maintenance services.
+Customization options to suit your business needs.
+
+Examples of Use Cases Requiring a Commercial License
+Incorporating this software into a closed-source or proprietary application.
+Embedding the software into a product that is distributed without source code access.
+Using the software in a SaaS (Software as a Service) offering without releasing the backend source code.
+For further details, please visit our website: https://tripbnb.com/
