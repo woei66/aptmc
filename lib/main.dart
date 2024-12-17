@@ -10,12 +10,14 @@ import 'home_page.dart';
 import 'management_page.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'config_parser.dart';
 
 void main() async {
   // the application data directory
   final directory = await getApplicationSupportDirectory();
   final appPath = '${directory.path}/${appName}';
   appDataPath = appPath.toString();
+  globalConfigFile = '${appDataPath}/global.cfg';
   //print('Application data path: $appDataPath');
   // get all Minecraft instances
   await getInstances();
@@ -78,85 +80,14 @@ Future<void> setupAppDataPath() async {
   }
 }
 
-// parse instance details
-Future<Map<String, String>> parseMMCPackJsonFile(String folder) async {
-  final filename = '${folder}/mmc-pack.json';
-  final file = File(filename);
-  Map<String, String> config = {};
-  print('[debug] instance config file = ${filename}');
-  try {
-    if (!file.existsSync()) {
-      // if file not exists, throw exception
-      print('[error] ${filename} not found');
-      throw Exception('[error] ${filename} not found');
-    }
-    // file exists
-    final contents = await file.readAsString();
-    final data = jsonDecode(contents);
-    String? minecraftVersion;
-    if (data is Map && data['components'] is List) {
-      final components = data['components'] as List;
-      for (final component in components) {
-        if (component is Map && component['uid'] == 'net.minecraft') {
-          config['version'] = component['version'] as String;
-        }
-      }
-    }
-    return config;
-  } catch (e, stackTrace) {
-    print('[exception] ${e}');
-    print(stackTrace);
-    throw Exception(e);
-  }
-}
-
-// parse instance.cfg file
-Future<Map<String, String>> parseInstanceCFGFile(String filePath) async {
-  final config = <String, String>{};
-
-  try {
-    final file = File(filePath);
-    if (!await file.exists()) {
-      throw Exception('[error] File not found: $filePath');
-    }
-
-    final lines = await file.readAsLines();
-
-    for (final line in lines) {
-      // skip empty or comment line
-      if (line.trim().isEmpty || line.startsWith('#')) {
-        continue;
-      }
-
-      // split and get key/value pair
-      final parts = line.split('=');
-      if (parts.length == 2) {
-        final key = parts[0].trim();
-        final value = parts[1].trim();
-        config[key] = value;
-      } else {
-        print('[error] Ignored malformed line: $line');
-      }
-    }
-  } catch (e) {
-    print('[error] Error reading config file: $e');
-    throw Exception(e);
-  }
-  return config;
-}
-
 // get all instances
 Future<void> getInstances() async {
   try {
-    //mcInstances.clear();
     instanceIcons.clear();
     instanceData.clear();
 
     final instanceDir = '${appDataPath}/instances';
     final directory = Directory(instanceDir!);
-    if (!directory.existsSync()) {
-      await ensureDirectoryExists(appDataPath!);
-    }
 
     // append a '+' icon
     var instanceKey = {
@@ -168,24 +99,41 @@ Future<void> getInstances() async {
     };
     instanceIcons.add(instanceKey);
 
+    if (!directory.existsSync()) {
+      // no any instance
+      return;
+    }
+
     // add existing instaces
     directory.listSync().forEach((item) async {
       if (item is Directory) {
         final instancecfgFile = '${item.path}/instance.cfg';
         if (await File(instancecfgFile).exists()) {
-          final instanceName = item.path.split('/').last;
-          //mcInstances.add(instanceName);
+          final instanceFolderName = item.path.split('/').last;
+          //mcInstances.add(instanceFolderName);
           final instance = {
-            'key': await sanitizeString(instanceName),
+            'key': await sanitizeString(instanceFolderName),
             'icon': Icons.sports_esports,
-            'text': instanceName,
+            'text': instanceFolderName,
             'page': ManagementPage(),
             'preaction': () async {}
           };
           instanceIcons.add(instance);
           Map<String, String> config1 =
-              await parseInstanceCFGFile(instancecfgFile);
-          Map<String, String> config2 = await parseMMCPackJsonFile(item.path);
+              await parseInstanceConfig(instanceFolderName);
+          Map<String, dynamic> modPackJson =
+              await parseModPackJson(instanceFolderName);
+          String? version;
+          if (modPackJson.containsKey('components') &&
+              modPackJson['components'] is List) {
+            final components = modPackJson['components'] as List;
+            for (var component in components) {
+              if (component is Map<String, dynamic> &&
+                  component['uid'] == 'net.minecraft') {
+                version = component['version'];
+              }
+            }
+          }
           final launchTime = DateTime.fromMillisecondsSinceEpoch(
               int.parse(config1['lastLaunchTime']!));
           final lastTimePlayed1 =
@@ -197,8 +145,8 @@ Future<void> getInstances() async {
           final totalTimePlayed2 =
               '${totalTimePlayed1.inHours} hours, ${totalTimePlayed1.inMinutes % 60} minutes';
           final data = {
-            'version': config2['version'],
-            'name': instanceName,
+            'version': version,
+            'name': instanceFolderName,
             'icon': Icons.videogame_asset,
             'lastLaunchTime': launchTime,
             'lastTimePlayed': lastTimePlayed2,
@@ -207,7 +155,7 @@ Future<void> getInstances() async {
             'preaction': () async {}
           };
           instanceData.add(data);
-          //print('[debug] instance found ${instanceName}');
+          //print('[debug] instance found ${instanceFolderName}');
         } else {
           // no instance.cfg file, the directory should be deleted??
           print('[debug] directory exists but instance.cfg not found ${item}');
@@ -217,7 +165,7 @@ Future<void> getInstances() async {
   } catch (e, stackTrace) {
     print('[exception] Failed to get Minecraft instances: $e');
     print(stackTrace);
-    throw Exception('Failed to get Minecraft instances: $e');
+    rethrow;
   }
 }
 

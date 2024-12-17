@@ -89,7 +89,6 @@ class MCClient {
           final versionTime = version['time']; // "2024-11-26T15:07:29+00:00"
           final versionReleaseTime = version['releaseTime'];
 
-          instanceName ??= versionId;
           parseVersion(versionId, versionUrl);
           break;
         }

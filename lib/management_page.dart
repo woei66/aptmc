@@ -7,6 +7,7 @@ import 'mc_client.dart';
 import 'myvars.dart';
 import 'download_file.dart';
 import 'bottom_page.dart';
+import 'instance_edit_page.dart';
 
 class ManagementPage extends StatefulWidget {
   @override
@@ -130,7 +131,7 @@ class InstanceListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 固定的表頭
+        // fixed header
         Container(
           color: Colors.grey[300],
           child: Row(
@@ -143,20 +144,31 @@ class InstanceListPage extends StatelessWidget {
             ],
           ),
         ),
-        // 可滾動的資料區域
+        // scrollable instance list
         Expanded(
           child: SingleChildScrollView(
             child: Column(
               children: instanceData.map((item) {
-                return Row(
-                  children: [
-                    _buildDataCell(item['name']?.toString() ?? ''),
-                    _buildDataCell(item['version']?.toString() ?? ''),
-                    _buildDataCell(item['lastLaunchTime']?.toString() ?? ''),
-                    _buildDataCell(item['lastTimePlayed']?.toString() ?? ''),
-                    _buildDataCell(item['totalTimePlayed']?.toString() ?? ''),
-                  ],
-                );
+                return GestureDetector(
+                    // the whole row is clickable
+                    onTapDown: (TapDownDetails details) {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => InstanceEditPage()));
+                    },
+                    child: Row(
+                      children: [
+                        _buildDataCell(item['name']?.toString() ?? ''),
+                        _buildDataCell(item['version']?.toString() ?? ''),
+                        _buildDataCell(
+                            item['lastLaunchTime']?.toString() ?? ''),
+                        _buildDataCell(
+                            item['lastTimePlayed']?.toString() ?? ''),
+                        _buildDataCell(
+                            item['totalTimePlayed']?.toString() ?? ''),
+                      ],
+                    ));
               }).toList(),
             ),
           ),

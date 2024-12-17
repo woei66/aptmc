@@ -29,7 +29,6 @@ const iconUrl = 'https://launcher.mojang.com/download/minecraft-launcher.svg';
 // Minecraft launcher client jar file
 String? clientFile;
 // multiple instance name and directory. Ex: instances/1.20.1-pokemon-fabric/.minecraft/
-String? instanceName;
 String? appDataPath;
 // application name
 const appName = 'aptmc';
@@ -44,3 +43,5 @@ String? javaPath;
 // instances icon
 List<Map<String, Object?>> instanceIcons = [];
 List<Map<String, Object?>> instanceData = [];
+// global configuration file for all instances as default value
+String? globalConfigFile;
