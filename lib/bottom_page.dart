@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
-import 'management_page.dart';
+import 'instance_list_page.dart';
 
 class BottomPage extends StatelessWidget {
   const BottomPage({Key? key}) : super(key: key);
@@ -39,13 +39,13 @@ class BottomPage extends StatelessWidget {
                   icon: Icon(Icons.edit_note),
                   onPressed: () {
                     Navigator.pushReplacement(context,
-                        MaterialPageRoute(builder: (_) => ManagementPage()));
+                        MaterialPageRoute(builder: (_) => InstanceListPage()));
                   },
                 ),
               ),
               Align(
                 alignment: Alignment.bottomCenter,
-                child: Text("Instances"),
+                child: Text("Management"),
               ),
             ],
           ),

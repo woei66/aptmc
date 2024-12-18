@@ -6,12 +6,12 @@ import 'myvars.dart';
 import 'dart:async';
 import 'dart:collection';
 
-class DownloadFile {
+class FileDownloader {
   final int maxConcurrentRequests;
   int _currentActiveRequests = 0;
   final Queue<Completer<void>> _requestQueue = Queue<Completer<void>>();
 
-  DownloadFile(this.maxConcurrentRequests);
+  FileDownloader(this.maxConcurrentRequests);
 
 // wait available slot
   Future<void> _waitForAvailableSlot() async {

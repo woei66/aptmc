@@ -1,34 +1,44 @@
 import 'dart:io';
+import 'package:aptmc/instance_edit_page.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'utils.dart';
-import 'mc_client.dart';
+import 'minecraft_launcher.dart';
 import 'myvars.dart';
-import 'download_file.dart';
+import 'file_downloader.dart';
 import 'home_page.dart';
-import 'management_page.dart';
+import 'instance_list_page.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'config_parser.dart';
+import 'instance_add_page.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   // the application data directory
   final directory = await getApplicationSupportDirectory();
   final appPath = '${directory.path}/${appName}';
+
   appDataPath = appPath.toString();
   globalConfigFile = '${appDataPath}/global.cfg';
   //print('Application data path: $appDataPath');
-  // get all Minecraft instances
-  await getInstances();
+
   // get operating system name
-  await getOperatingSystem();
-  // application data directory
-  await setupAppDataPath();
-  runApp(MinecraftLauncher());
+  await getPlatform();
+
+  //prepare the application data directory
+  await prepareAppDataPath();
+
+  // get local installed instances
+  await getLocalInstances();
+
+  // main entry
+  runApp(MyApp());
 }
 
-Future<void> getOperatingSystem() async {
+Future<void> getPlatform() async {
   if (Platform.isWindows) {
     osName = 'windows';
   } else if (Platform.isLinux) {
@@ -56,7 +66,7 @@ config/ : file is ending with .cfg, .json or .xml are used for game or mods conf
 jar/ : specific Minecraft main .jar files. Ex: daemon
 accounts.json : store account information (Microsoft or Mojang) and is stored in encrypted for sing-in automatically.
 */
-Future<void> setupAppDataPath() async {
+Future<void> prepareAppDataPath() async {
   List<String> subDirs = [
     'assets',
     'cache',
@@ -81,87 +91,84 @@ Future<void> setupAppDataPath() async {
 }
 
 // get all instances
-Future<void> getInstances() async {
+Future<void> getLocalInstances() async {
   try {
     instanceIcons.clear();
     instanceData.clear();
 
     final instanceDir = '${appDataPath}/instances';
-    final directory = Directory(instanceDir!);
-
-    // append a '+' icon
-    var instanceKey = {
-      'key': 'addInstance',
-      'icon': Icons.add_circle,
-      'text': 'Add Instance',
-      'page': ManagementPage(),
-      'preaction': () async {}
-    };
-    instanceIcons.add(instanceKey);
-
-    if (!directory.existsSync()) {
-      // no any instance
-      return;
-    }
+    final directory = Directory(instanceDir);
 
     // add existing instaces
-    directory.listSync().forEach((item) async {
-      if (item is Directory) {
-        final instancecfgFile = '${item.path}/instance.cfg';
-        if (await File(instancecfgFile).exists()) {
-          final instanceFolderName = item.path.split('/').last;
-          //mcInstances.add(instanceFolderName);
-          final instance = {
-            'key': await sanitizeString(instanceFolderName),
-            'icon': Icons.sports_esports,
-            'text': instanceFolderName,
-            'page': ManagementPage(),
-            'preaction': () async {}
-          };
-          instanceIcons.add(instance);
-          Map<String, String> config1 =
-              await parseInstanceConfig(instanceFolderName);
-          Map<String, dynamic> modPackJson =
-              await parseModPackJson(instanceFolderName);
-          String? version;
-          if (modPackJson.containsKey('components') &&
-              modPackJson['components'] is List) {
-            final components = modPackJson['components'] as List;
-            for (var component in components) {
-              if (component is Map<String, dynamic> &&
-                  component['uid'] == 'net.minecraft') {
-                version = component['version'];
+    if (directory.existsSync()) {
+      final items = directory.listSync();
+      for (var item in items) {
+        if (item is Directory) {
+          final instancecfgFile = '${item.path}/instance.cfg';
+
+          if (await File(instancecfgFile).exists()) {
+            final instanceFolderName = item.path.split('/').last;
+            //mcInstances.add(instanceFolderName);
+            final instance = {
+              'key': await sanitizeString(instanceFolderName),
+              'icon': Icons.sports_esports,
+              'text': instanceFolderName,
+              'page': InstanceEditPage(),
+              'preaction': () async {}
+            };
+            instanceIcons.add(instance);
+
+            Map<String, String> config1 =
+                await parseInstanceConfig(instanceFolderName);
+            Map<String, dynamic> modPackJson =
+                await parseModPackJson(instanceFolderName);
+
+            String? version;
+
+            if (modPackJson.containsKey('components') &&
+                modPackJson['components'] is List) {
+              final components = modPackJson['components'] as List;
+              for (var component in components) {
+                if (component is Map<String, dynamic> &&
+                    component['uid'] == 'net.minecraft') {
+                  version = component['version'];
+                }
               }
             }
+
+            final launchTime = DateTime.fromMillisecondsSinceEpoch(
+                int.parse(config1['lastLaunchTime']!));
+            final lastTimePlayed1 =
+                Duration(seconds: int.parse(config1['lastTimePlayed']!));
+            final lastTimePlayed2 =
+                '${lastTimePlayed1.inHours} hours, ${lastTimePlayed1.inMinutes % 60} minutes';
+            final totalTimePlayed1 =
+                Duration(seconds: int.parse(config1['totalTimePlayed']!));
+            final totalTimePlayed2 =
+                '${totalTimePlayed1.inHours} hours, ${totalTimePlayed1.inMinutes % 60} minutes';
+            final data = {
+              'version': version,
+              'name': instanceFolderName,
+              'icon': Icons.videogame_asset,
+              'lastLaunchTime': launchTime,
+              'lastTimePlayed': lastTimePlayed2,
+              'totalTimePlayed': totalTimePlayed2,
+              'page': InstanceEditPage(),
+              'preaction': () async {}
+            };
+
+            instanceData.add(data);
+            //print('[debug] instance found ${instanceFolderName}');
+          } else {
+            // no instance.cfg file, the directory should be deleted??
+            print(
+                '[debug] directory exists but instance.cfg not found ${item}');
           }
-          final launchTime = DateTime.fromMillisecondsSinceEpoch(
-              int.parse(config1['lastLaunchTime']!));
-          final lastTimePlayed1 =
-              Duration(seconds: int.parse(config1['lastTimePlayed']!));
-          final lastTimePlayed2 =
-              '${lastTimePlayed1.inHours} hours, ${lastTimePlayed1.inMinutes % 60} minutes';
-          final totalTimePlayed1 =
-              Duration(seconds: int.parse(config1['totalTimePlayed']!));
-          final totalTimePlayed2 =
-              '${totalTimePlayed1.inHours} hours, ${totalTimePlayed1.inMinutes % 60} minutes';
-          final data = {
-            'version': version,
-            'name': instanceFolderName,
-            'icon': Icons.videogame_asset,
-            'lastLaunchTime': launchTime,
-            'lastTimePlayed': lastTimePlayed2,
-            'totalTimePlayed': totalTimePlayed2,
-            'page': ManagementPage(),
-            'preaction': () async {}
-          };
-          instanceData.add(data);
-          //print('[debug] instance found ${instanceFolderName}');
-        } else {
-          // no instance.cfg file, the directory should be deleted??
-          print('[debug] directory exists but instance.cfg not found ${item}');
         }
       }
-    });
+    } else {
+      print('[debug] no instance exists');
+    }
   } catch (e, stackTrace) {
     print('[exception] Failed to get Minecraft instances: $e');
     print(stackTrace);
@@ -169,7 +176,7 @@ Future<void> getInstances() async {
   }
 }
 
-class MinecraftLauncher extends StatelessWidget {
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

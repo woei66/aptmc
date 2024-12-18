@@ -9,123 +9,29 @@ import 'file_downloader.dart';
 import 'bottom_page.dart';
 import 'instance_edit_page.dart';
 
-class ManagementPage extends StatefulWidget {
+class InstanceListPage extends StatefulWidget {
   @override
-  _ManagementPageState createState() => _ManagementPageState();
+  _InstanceListPageState createState() => _InstanceListPageState();
 }
 
-class _ManagementPageState extends State<ManagementPage> {
+class _InstanceListPageState extends State<InstanceListPage> {
   String _statusMessage = "Preparing to start...";
   bool _isDownloading = false;
-
-  Future<void> checkForUpdates() async {
-    setState(() {
-      _statusMessage = "Checking status...";
-    });
-
-    try {
-      final url = "https://api.mojang.com/mc";
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _statusMessage = "Minecraft is the latest version";
-        });
-      } else {
-        setState(() {
-          _statusMessage = "Failed to check updates";
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _statusMessage = "There is something wrong when checking updates.";
-      });
-    }
-  }
-
-  Future<void> downloadMinecraft() async {
-    setState(() {
-      _statusMessage = "Downloading ...";
-      _isDownloading = true;
-    });
-
-    try {
-      // get client version and download client jar file
-      final mcClient = MinecraftLauncher();
-      await mcClient.prepare(null);
-      setState(() {
-        _statusMessage = "Minecraft downloaded successfully.";
-        _isDownloading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _statusMessage = "Downloaded failed: $e";
-        _isDownloading = false;
-      });
-    }
-  }
-
-  Future<void> launchMinecraft() async {
-    setState(() {
-      _statusMessage = "Start Minecraft...";
-    });
-
-    final dir = await getApplicationDocumentsDirectory();
-    String launcherFile = '${dir.path}/minecraft-launcher/minecraft-launcher';
-
-    if (await File(launcherFile).exists()) {
-      await Process.start(launcherFile, [], runInShell: true);
-      setState(() {
-        _statusMessage = "Minecraft is running!";
-      });
-    } else {
-      setState(() {
-        _statusMessage = "Minecraft file is not found";
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Instances Management'),
+        title: Text('Instances Editing'),
       ),
-      /*body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _statusMessage,
-              style: TextStyle(fontSize: 20),
-            ),
-            SizedBox(height: 20),
-            if (!_isDownloading) ...[
-              ElevatedButton(
-                onPressed: checkForUpdates,
-                child: Text("Check updates"),
-              ),
-              ElevatedButton(
-                onPressed: downloadMinecraft,
-                child: Text("Download Minecraft"),
-              ),
-              ElevatedButton(
-                onPressed: launchMinecraft,
-                child: Text("Start Minecraft"),
-              ),
-            ],
-          ],
-        ),
-      ),*/
-      body: InstanceListPage(),
+      body: InstanceListContentPage(),
       bottomNavigationBar: const BottomPage(),
     );
   }
 }
 
-class InstanceListPage extends StatelessWidget {
-  InstanceListPage({Key? key}) : super(key: key);
+class InstanceListContentPage extends StatelessWidget {
+  InstanceListContentPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -184,8 +90,8 @@ class InstanceListPage extends StatelessWidget {
               ),
             ),
             Align(
-              alignment: Alignment.bottomCenter,
-              child: Text("Create new instance"),
+              alignment: Alignment.center,
+              child: Text("Add"),
             ),
           ],
         ),

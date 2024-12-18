@@ -3,15 +3,15 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 import 'utils.dart';
-//import 'download_file.dart';
 import 'myvars.dart';
-import 'rust_downloader.dart';
+import 'rust_downloader.dart'; // rust implemented file downloader
 import 'java_path_finder.dart';
+import 'file_downloader.dart';
 
-class MCClient {
-  // keep 1 http request to minecraft server to reduce server loading
-  //final downloader = DownloadFile(2);
-  final downloader = RustDownloader(2);
+class MinecraftLauncher {
+  // Using two http connections to minecraft server to reduce server loading
+  final downloader = FileDownloader(2);
+  //final downloader = RustDownloader(2);
   Future<void> prepare(String? versionNum) async {
     try {
       print('appDataPath=${appDataPath}');

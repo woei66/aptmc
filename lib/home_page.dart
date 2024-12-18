@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'utils.dart';
-import 'mc_client.dart';
+import 'minecraft_launcher.dart';
 import 'myvars.dart';
-import 'download_file.dart';
+import 'file_downloader.dart';
 import 'bottom_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -50,7 +50,7 @@ class _HomePageState extends State<HomePage> {
 
     try {
       // get client version and download client jar file
-      final mcClient = MCClient();
+      final mcClient = MinecraftLauncher();
       await mcClient.prepare(null);
       setState(() {
         _statusMessage = "Minecraft downloaded successfully.";
@@ -88,7 +88,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('APTMC Minecraft'),
+        title: Text('Home'),
       ),
       /*body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -137,23 +137,22 @@ class MainPage extends StatelessWidget {
             crossAxisSpacing: 8.0,
             mainAxisSpacing: 8.0,
           ),
-          itemCount: instanceIcons.length,
+          itemCount: instanceData.length,
           itemBuilder: (context, index) {
-            final item = instanceIcons[index];
+            final item = instanceData[index];
             return InkWell(
               onTap: () async {
                 // execute preaction if defined
+                print(item);
                 if (item['preaction'] != null) {
                   await (item['preaction'] as Function)();
                 }
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => item['page'] as Widget));
               },
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(item['icon'] as IconData, size: 36),
-                  Text(item['text'] as String),
+                  Icon(item['icon'] as IconData, size: 48),
+                  Text(item['name'] as String),
                 ],
               ),
             );
