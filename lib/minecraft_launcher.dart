@@ -12,13 +12,14 @@ class MinecraftLauncher {
   // Using two http connections to minecraft server to reduce server loading
   final downloader = FileDownloader(2);
   //final downloader = RustDownloader(2);
+
   Future<void> prepare(String? versionNum) async {
     try {
       print('appDataPath=${appDataPath}');
-      final javaPath = await JavaPathFinder.findJavaExecutable();
+      javaPath = await JavaPathFinder.findJavaExecutable();
       if (javaPath != null) {
         print('Java path: $javaPath');
-        final version = await JavaPathFinder.getJavaVersion(javaPath);
+        final version = await JavaPathFinder.getJavaVersion(javaPath!);
         print('Version: $version');
       } else {
         print('[error] Java executable not found');
@@ -26,18 +27,11 @@ class MinecraftLauncher {
       }
       print('javaPath=${javaPath}');
       await getClientVersion(versionNum);
-      await prepareLaunchCommmand();
     } catch (e, stackTrace) {
       print('[exception] catch ${e}');
       print(stackTrace);
       throw Exception(e);
     }
-  }
-
-  // preare complete console command string for Minecraft launche
-  Future<void> prepareLaunchCommmand() async {
-    String launcherCommand = '${javaPath} ${jvmArgs}';
-    print('[debug] launcherCommand=${launcherCommand}');
   }
 
   // get version information
@@ -208,7 +202,7 @@ class MinecraftLauncher {
     try {
       // get Minecraft client jar file
       clientFile = '${appDataPath}/jar/${versionId}-client.jar';
-      await ensureDirectoryExists(clientFile!);
+
       print('[debug] client jar file= ${clientFile}');
       await downloader.fetch(clientUrl, clientFile!);
       //await downloader.checkFile(clientFile!, clientSize, clientSha1);
@@ -236,7 +230,7 @@ class MinecraftLauncher {
         if (!File(file).existsSync()) {
           print(
               '[debug] download ${i + 1}/${jsonData["libraries"].length} ${file}');
-          await ensureDirectoryExists(file);
+
           await downloader.fetch(libraryUrl, file);
         }
       }
@@ -256,7 +250,7 @@ class MinecraftLauncher {
     final assetTotalSize = jsonData['assetIndex']['totalSize'];
     final assetSha1 = jsonData['assetIndex']['sha1'];
     final assetJsonFile = '${appDataPath}/assets/indexes/${assetId}.json';
-    //await ensureDirectoryExists(assetJsonFile);
+
     try {
       if (!File(assetJsonFile).existsSync()) {
         print("[debug] ${assetJsonFile} directory is not extsed");
@@ -275,7 +269,7 @@ class MinecraftLauncher {
         String hash = value["hash"];
         String subhash = hash.substring(0, 2);
         final assetfile = '${appDataPath}/assets/objects/${subhash}/${hash}';
-        //await ensureDirectoryExists(assetfile);
+
         final assetUrl =
             'https://resources.download.minecraft.net/${subhash}/${hash}';
         if (!File(assetfile).existsSync()) {

@@ -82,7 +82,18 @@ class JavaPathFinder {
 
   /// Find Java path on Linux
   static Future<String?> _findJavaOnLinux() async {
-    // Try using 'which' command
+    final preferredPaths = [
+      '/usr/lib/jvm/jdk-17-oracle-x64/bin/java',
+      '/usr/lib/jvm/java-17-oracle/bin/java',
+      '/usr/lib/jvm/java-17/bin/java'
+    ];
+
+    for (var path in preferredPaths) {
+      if (await File(path).exists()) {
+        return path;
+      }
+    }
+
     try {
       final result = await Process.run('which', ['java']);
       if (result.exitCode == 0) {
@@ -91,7 +102,6 @@ class JavaPathFinder {
       }
     } catch (_) {}
 
-    // Check common paths
     final commonPaths = [
       '/usr/lib/jvm',
       '/usr/local/java',

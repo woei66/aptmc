@@ -4,7 +4,7 @@ Future<void> ensureDirectoryExists(String filePath) async {
   final subDir = File(filePath).parent;
 
   //print("[directory] ${filePath}");
-  if (!subDir.existsSync()) {
+  if (await !subDir.existsSync()) {
     subDir.createSync(recursive: true);
     //print("[directory] create: ${subDir} ok");
   } else {

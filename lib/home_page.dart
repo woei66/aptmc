@@ -126,6 +126,24 @@ class _HomePageState extends State<HomePage> {
 class MainPage extends StatelessWidget {
   MainPage({Key? key}) : super(key: key);
 
+  // start the stance
+  Future<void> startInstance(String instanceFolderName) async {
+    for (var item in instanceData) {
+      if (item['name'] == instanceFolderName) {
+        final mcClient = MinecraftLauncher();
+        await mcClient.prepare(null);
+        final dir = await getApplicationDocumentsDirectory();
+        String launcherFile =
+            '${dir.path}/minecraft-launcher/minecraft-launcher';
+        String launcherCmd = '${javaPath} ${jvmArgs}';
+        print('[debug] launcherCmd=${launcherCmd}');
+        //if (await File(launcherFile).exists()) {
+        // await Process.start(launcherFile, [], runInShell: true);
+        // }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -142,14 +160,14 @@ class MainPage extends StatelessWidget {
             final item = instanceData[index];
             return InkWell(
               onTap: () async {
+                await startInstance(item['name'].toString());
                 // execute preaction if defined
-                print(item);
-                if (item['preaction'] != null) {
-                  await (item['preaction'] as Function)();
-                }
+                //if (item['preaction'] != null) {
+                //  await (item['preaction'] as Function)();
+                //
               },
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Icon(item['icon'] as IconData, size: 48),
                   Text(item['name'] as String),
