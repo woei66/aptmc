@@ -35,6 +35,7 @@ class InstanceListContentPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    setBottomIconColor('instance');
     return Column(
       children: [
         // fixed header

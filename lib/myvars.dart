@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:ui';
+import 'package:flutter/material.dart';
 
 String? launcherMSAClientID;
 String? curseforgeAPIKey;
@@ -27,7 +29,7 @@ const clientInfoUrl =
 // icon
 const iconUrl = 'https://launcher.mojang.com/download/minecraft-launcher.svg';
 // Minecraft launcher client jar file
-String? clientFile;
+String? minecraftLauncherPath;
 // multiple instance name and directory. Ex: instances/1.20.1-pokemon-fabric/.minecraft/
 String? appDataPath;
 // application name
@@ -35,8 +37,8 @@ const appName = 'aptmc';
 // operating system
 String? osName;
 // JVM arguments
-String? jvmArgs;
-String? gameArgs;
+String? jvmArguments;
+String? gameArguments;
 String? javaPath;
 // instances name
 //List<String> mcInstances = [];
@@ -45,3 +47,12 @@ List<Map<String, Object?>> instanceIcons = [];
 List<Map<String, Object?>> instanceData = [];
 // global configuration file for all instances as default value
 String? globalConfigFile;
+// full command of launcher
+String? fullCommand;
+// color of bottom page
+Map<String, Color> bottomIconColor = {
+  'home': Colors.blue,
+  'instance': Colors.black,
+  'setting': Colors.black,
+  'account': Colors.black,
+};

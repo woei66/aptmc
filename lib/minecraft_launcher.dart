@@ -125,12 +125,64 @@ class MinecraftLauncher {
       throw Exception(e);
     }
     // parse response
-    await parseGameArgument(versionId, jsonData); // launcher
-    await parseJVMArgument(versionId, jsonData); // JVM
-    await parseLauncherFile(
-        versionId, jsonData); // parse and download Minecraft launcher jar file
-    await parseAsset(versionId, jsonData); // parse & download assets
-    await parseLibraris(versionId, jsonData); // parse and download libraris
+    // launcher
+    await parseGameArgument(versionId, jsonData);
+    // JVM
+    await parseJVMArgument(versionId, jsonData);
+    // parse and download Minecraft launcher jar file
+    await parseLauncherFile(versionId, jsonData);
+    // parse & download assets
+    await parseAsset(versionId, jsonData);
+    // parse and download libraris
+    await parseLibraris(versionId, jsonData);
+    launchMinecraft();
+  }
+
+  Map<String, String> setJavaEnvironment() {
+    final environment = Map<String, String>.from(Platform.environment);
+
+    String javaHome;
+    if (Platform.isLinux || Platform.isMacOS) {
+      javaHome = '/usr/lib/jvm/jdk-17-oracle-x64';
+    } else if (Platform.isWindows) {
+      javaHome = 'C:\\Program Files\\Java\\jdk-17';
+    } else {
+      throw UnsupportedError('Unsupported platform');
+    }
+
+    environment['JAVA_HOME'] ??= javaHome;
+
+    if (!environment['PATH']!.contains('${environment['JAVA_HOME']}/bin')) {
+      environment['PATH'] =
+          '${environment['JAVA_HOME']}/bin:${environment['PATH']}';
+    }
+
+    return environment;
+  }
+
+  // launch Minecraft client with JVM and game arguments
+  void launchMinecraft() {
+    // java environment
+    final environment = setJavaEnvironment();
+    final jvmArgumentString = '';
+    final gameArgumentString = '';
+    /*final jvmArgumentString =
+        jvmArguments!.replaceAll("\${natives_directory}", nativesDirectory);
+    final gameArgumentString =
+        gameArguments!.replaceAll("\${natives_directory}", nativesDirectory);
+        */
+    final arguments = [
+      jvmArgumentString,
+      minecraftLauncherPath!,
+      "net.minecraft.client.main.Main", // offical EntryPoint
+      gameArgumentString,
+    ];
+    print(arguments);
+    /*Process.start(javaPath!, arguments, environment: environment)
+        .then((process) {
+      stdout.addStream(process.stdout);
+      stderr.addStream(process.stderr);
+    });*/
   }
 
   Future<void> parseGameArgument(String versionId, var jsonData) async {
@@ -146,10 +198,21 @@ class MinecraftLauncher {
       }
     }
     if (args.length > 0) {
-      gameArgs = args.join(' ');
-      print("[debug] game arguments=${gameArgs}");
+      gameArguments = args.join(' ');
+      print("[debug] game arguments=${gameArguments}");
     }
   }
+
+  // ${auth_player_name} : name of player
+  // ${version_name} : the version of Minecraft
+  // ${game_directory} : the game directory
+  // ${natives_directory} : the directory of official Minecraft libraries
+  // ${classpath} : all directories of all required jar files, (":" => linux, ";" => windows)
+  // ${assets_root}
+  // ${assets_index_name}
+  // ${auth_uuid}
+  // ${auth_access_token}
+  // -Xms/-Xmx : memory settings
 
   // yggdrasil: the authentication system for Minecraft after 1.6-pre
   // yggdrasil: using access token to replace the user/password
@@ -157,7 +220,6 @@ class MinecraftLauncher {
   // "${auth_player_name}"
   // "--uuid"
   // "${auth_uuid}"
-
   // parse JVM arguments
   Future<void> parseJVMArgument(String versionId, var jsonData) async {
     final jvm = jsonData['arguments']['jvm'];
@@ -177,8 +239,8 @@ class MinecraftLauncher {
       }
     }
     if (args.length > 0) {
-      jvmArgs = args.join(' ');
-      print("[debug] JVM arguments = ${jvmArgs}");
+      jvmArguments = args.join(' ');
+      print("[debug] JVM arguments = ${jvmArguments}");
     }
   }
 
@@ -201,10 +263,10 @@ class MinecraftLauncher {
 
     try {
       // get Minecraft client jar file
-      clientFile = '${appDataPath}/jar/${versionId}-client.jar';
+      minecraftLauncherPath = '${appDataPath}/jar/${versionId}-client.jar';
 
-      print('[debug] client jar file= ${clientFile}');
-      await downloader.fetch(clientUrl, clientFile!);
+      print('[debug] client jar file= ${minecraftLauncherPath}');
+      await downloader.fetch(clientUrl, minecraftLauncherPath!);
       //await downloader.checkFile(clientFile!, clientSize, clientSha1);
     } catch (e, stackStace) {
       print('exception: ${e}');

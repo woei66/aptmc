@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'instance_list_page.dart';
+import 'myvars.dart';
 
 class BottomPage extends StatelessWidget {
   const BottomPage({Key? key}) : super(key: key);
@@ -17,7 +18,10 @@ class BottomPage extends StatelessWidget {
               Align(
                 alignment: Alignment.center,
                 child: IconButton(
-                  icon: Icon(Icons.home),
+                  icon: Icon(
+                    Icons.home,
+                    color: bottomIconColor['home'],
+                  ),
                   onPressed: () {
                     Navigator.pushReplacement(
                         context, MaterialPageRoute(builder: (_) => HomePage()));
@@ -36,7 +40,10 @@ class BottomPage extends StatelessWidget {
               Align(
                 alignment: Alignment.center,
                 child: IconButton(
-                  icon: Icon(Icons.edit_note),
+                  icon: Icon(
+                    Icons.edit_note,
+                    color: bottomIconColor['instance'],
+                  ),
                   onPressed: () {
                     Navigator.pushReplacement(context,
                         MaterialPageRoute(builder: (_) => InstanceListPage()));
@@ -55,7 +62,10 @@ class BottomPage extends StatelessWidget {
               Align(
                 alignment: Alignment.center,
                 child: IconButton(
-                  icon: Icon(Icons.settings),
+                  icon: Icon(
+                    Icons.settings,
+                    color: bottomIconColor['setting'],
+                  ),
                   onPressed: () {},
                 ),
               ),
@@ -71,7 +81,10 @@ class BottomPage extends StatelessWidget {
               Align(
                 alignment: Alignment.center,
                 child: IconButton(
-                  icon: Icon(Icons.person),
+                  icon: Icon(
+                    Icons.person,
+                    color: bottomIconColor['account'],
+                  ),
                   onPressed: () {},
                 ),
               ),

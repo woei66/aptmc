@@ -13,6 +13,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'config_parser.dart';
 import 'instance_add_page.dart';
+import 'package:get_storage/get_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,9 @@ void main() async {
   appDataPath = appPath.toString();
   globalConfigFile = '${appDataPath}/global.cfg';
   //print('Application data path: $appDataPath');
+
+  // for application level cache storage
+  await GetStorage.init();
 
   // get operating system name
   await getPlatform();
@@ -179,8 +183,9 @@ Future<void> getLocalInstances() async {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    setBottomIconColor('home');
     return MaterialApp(
-      title: 'APTMC Launcher',
+      title: 'APTMC : Open Source Minecraft launcher',
       theme: ThemeData(
         primarySwatch: Colors.green,
       ),

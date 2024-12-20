@@ -135,7 +135,7 @@ class MainPage extends StatelessWidget {
         final dir = await getApplicationDocumentsDirectory();
         String launcherFile =
             '${dir.path}/minecraft-launcher/minecraft-launcher';
-        String launcherCmd = '${javaPath} ${jvmArgs}';
+        String launcherCmd = '${javaPath} ${jvmArguments}';
         print('[debug] launcherCmd=${launcherCmd}');
         //if (await File(launcherFile).exists()) {
         // await Process.start(launcherFile, [], runInShell: true);
@@ -146,9 +146,15 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    setBottomIconColor('home');
     return LayoutBuilder(
       builder: (context, constraints) {
-        final iconsPerRow = (constraints.maxWidth / 96).floor();
+        // make sure iconsPerRow can't be zero or null
+        final iconsPerRow = (constraints.maxWidth / 96)
+            .floor()
+            .clamp(1, double.infinity)
+            .toInt();
+
         return GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: iconsPerRow,
