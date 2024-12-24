@@ -126,20 +126,94 @@ class _HomePageState extends State<HomePage> {
 class MainPage extends StatelessWidget {
   MainPage({Key? key}) : super(key: key);
 
+  String replacePlaceholders(String input, Map<String, String> replacements) {
+    replacements.forEach((key, value) {
+      input = input.replaceAll(key, value);
+    });
+    return input;
+  }
+
+  // get all class libraries
+  String generateClasspath(String baseDir) {
+    try {
+      final directory = Directory(baseDir);
+      if (!directory.existsSync()) {
+        print('[warning] Directory does not exist: $baseDir');
+        return ''; // Return empty string if directory doesn't exist
+      }
+      final jars = directory
+          .listSync(recursive: true)
+          .whereType<File>() // File only
+          .where((file) => file.path.endsWith('.jar'))
+          .map((file) => file.path)
+          .join(':');
+      return jars.isNotEmpty
+          ? jars
+          : ''; // Return empty string if no jars found
+    } catch (e, stackTrace) {
+      print('[exception] $e');
+      return ''; // Return empty string on exception
+    }
+  }
+
   // start the stance
   Future<void> startInstance(String instanceFolderName) async {
     for (var item in instanceData) {
       if (item['name'] == instanceFolderName) {
         final mcClient = MinecraftLauncher();
-        await mcClient.prepare(null);
-        final dir = await getApplicationDocumentsDirectory();
-        String launcherFile =
-            '${dir.path}/minecraft-launcher/minecraft-launcher';
-        String launcherCmd = '${javaPath} ${jvmArguments}';
-        print('[debug] launcherCmd=${launcherCmd}');
-        //if (await File(launcherFile).exists()) {
-        // await Process.start(launcherFile, [], runInShell: true);
-        // }
+        await mcClient.prepare(item['version'].toString());
+        print('[debug] Minecraft version=${item['version']}');
+        // java environment
+        final environment = mcClient.setJavaEnvironment();
+        // appDataPath = /home/woei/.local/share/com.example.aptmc/aptmc/
+
+        final primaryLibraryPath =
+            generateClasspath('${appDataPath}/libraries');
+        final instanceLibraryPath = generateClasspath(
+            '${appDataPath}/instances/${instanceFolderName}/.minecraft/libraries');
+
+        final classpath = [
+          primaryLibraryPath,
+          if (instanceLibraryPath != null && instanceLibraryPath.isNotEmpty)
+            instanceLibraryPath,
+          launcherJarFile
+        ].where((path) => path != null && path.isNotEmpty).join(':');
+
+        final nativesDir =
+            '${appDataPath}/instances/${instanceFolderName}/natives';
+        final replacements = {
+          '\${natives_directory}': '${nativesDir}',
+          '\${launcher_name}': appName,
+          '\${launcher_version}': item['version'].toString(),
+          '\${classpath}': classpath,
+        };
+
+        final jvmArgumentString =
+            replacePlaceholders(jvmArguments!, replacements);
+
+        final gameArgumentString = jvmArguments!.replaceAll(
+            "\${natives_directory}",
+            '${appDataPath}/instances/${instanceFolderName}/natives');
+
+        final arguments = [
+          //'-verbose:class',
+          jvmArgumentString,
+          "net.minecraft.client.main.Main",
+          //gameArgumentString,
+        ];
+        print(arguments);
+
+        try {
+          final process = await Process.start(javaPath!, arguments,
+              environment: environment);
+          stdout.addStream(process.stdout);
+          stderr.addStream(process.stderr);
+          await process.exitCode;
+        } catch (e, stackTrace) {
+          print('[error] Failed to start process: $e');
+          print(stackTrace);
+        }
+        break;
       }
     }
   }

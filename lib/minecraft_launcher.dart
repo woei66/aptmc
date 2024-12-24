@@ -47,7 +47,7 @@ class MinecraftLauncher {
           print(
               '[debug][dart] download file=${versionFile}, url=${myvars.clientInfoUrl}');
           // save version file to local disk
-          downloader.fetch(myvars.clientInfoUrl, versionFile);
+          await downloader.fetch(myvars.clientInfoUrl, versionFile);
           jsonData = jsonDecode(response.body);
         } else {}
       } catch (e, stackStace) {
@@ -83,7 +83,7 @@ class MinecraftLauncher {
           final versionTime = version['time']; // "2024-11-26T15:07:29+00:00"
           final versionReleaseTime = version['releaseTime'];
 
-          parseVersion(versionId, versionUrl);
+          await parseVersion(versionId, versionUrl);
           break;
         }
       }
@@ -135,7 +135,6 @@ class MinecraftLauncher {
     await parseAsset(versionId, jsonData);
     // parse and download libraris
     await parseLibraris(versionId, jsonData);
-    launchMinecraft();
   }
 
   Map<String, String> setJavaEnvironment() {
@@ -158,31 +157,6 @@ class MinecraftLauncher {
     }
 
     return environment;
-  }
-
-  // launch Minecraft client with JVM and game arguments
-  void launchMinecraft() {
-    // java environment
-    final environment = setJavaEnvironment();
-    final jvmArgumentString = '';
-    final gameArgumentString = '';
-    /*final jvmArgumentString =
-        jvmArguments!.replaceAll("\${natives_directory}", nativesDirectory);
-    final gameArgumentString =
-        gameArguments!.replaceAll("\${natives_directory}", nativesDirectory);
-        */
-    final arguments = [
-      jvmArgumentString,
-      minecraftLauncherPath!,
-      "net.minecraft.client.main.Main", // offical EntryPoint
-      gameArgumentString,
-    ];
-    print(arguments);
-    /*Process.start(javaPath!, arguments, environment: environment)
-        .then((process) {
-      stdout.addStream(process.stdout);
-      stderr.addStream(process.stderr);
-    });*/
   }
 
   Future<void> parseGameArgument(String versionId, var jsonData) async {
@@ -263,13 +237,13 @@ class MinecraftLauncher {
 
     try {
       // get Minecraft client jar file
-      minecraftLauncherPath = '${appDataPath}/jar/${versionId}-client.jar';
+      launcherJarFile = '${appDataPath}/jar/${versionId}-client.jar';
 
-      print('[debug] client jar file= ${minecraftLauncherPath}');
-      await downloader.fetch(clientUrl, minecraftLauncherPath!);
+      print('[debug] client jar file= ${launcherJarFile}');
+      await downloader.fetch(clientUrl, launcherJarFile!);
       //await downloader.checkFile(clientFile!, clientSize, clientSha1);
     } catch (e, stackStace) {
-      print('exception: ${e}');
+      print('[error] exception: ${e}');
       print(stackStace);
       throw Exception(e);
     }

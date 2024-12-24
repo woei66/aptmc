@@ -29,7 +29,7 @@ const clientInfoUrl =
 // icon
 const iconUrl = 'https://launcher.mojang.com/download/minecraft-launcher.svg';
 // Minecraft launcher client jar file
-String? minecraftLauncherPath;
+String? launcherJarFile;
 // multiple instance name and directory. Ex: instances/1.20.1-pokemon-fabric/.minecraft/
 String? appDataPath;
 // application name
